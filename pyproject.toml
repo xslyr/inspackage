@@ -1,0 +1,62 @@
+[project]
+name = "inspackage"
+version = "0.1.0"
+description = "Useful tool for general inspection about some python package."
+authors = [
+    {name = "xslyr",email = "wesleysilv@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13,<4.0.0"
+dependencies = [
+    "dotenv (>=0.9.9,<0.10.0)",
+    "typer[all] (>=0.21.1,<0.22.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "ruff (>=0.14.14,<0.15.0)",
+    "pylint (>=4.0.4,<5.0.0)",
+    "taskipy (>=1.14.1,<2.0.0)",
+    "pytest (>=9.0.2,<10.0.0)",
+    "pytest-cov (>=7.0.0,<8.0.0)"
+]
+
+
+[tool.pytest.ini_options]
+pythonpath = "."
+testpaths = "tests"
+python_files = "test_*.py"
+addopts = "--doctest-modules"
+
+
+[tool.taskipy.tasks]
+lint = "pylint inspack/"
+ruff = "ruff format ./inspack && ruff check --fix ./inspack"
+test = "pytest -s -v --cov=inspack"
+post_test = "coverage html"
+
+
+[tool.pylint.master]
+ignore-paths = ["^tests/.*$"]
+
+[tool.pylint.format]
+max-line-length = 120
+
+[tool.pylint."messages control"]
+disable = []
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E731"]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-single-line = false
