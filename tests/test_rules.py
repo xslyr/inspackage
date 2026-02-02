@@ -1,6 +1,6 @@
 import pytest
 
-from inspack.rules import check_file, check_path
+from inspackage.rules import check_file, check_path
 
 
 @pytest.mark.parametrize(

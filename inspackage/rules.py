@@ -27,14 +27,13 @@ def _check_allowed(path_or_file: str, rules: Rules):
 
 
 def check_path(path: str):
-    basename = path[:-1] if path.endswith("/") else path
-    basename = os.path.basename(basename) if "/" in basename else basename
-    return _check_allowed(basename, Rules.path)
+    p = os.path.basename(os.path.normpath(path))
+    return _check_allowed(p, Rules.path)
 
 
 def check_file(file: str):
-    basename = os.path.basename(file) if "/" in file else file
-    return _check_allowed(basename, Rules.file)
+    f = os.path.basename(file)
+    return _check_allowed(f, Rules.file)
 
 
 __all__ = ["check_path", "check_file"]
