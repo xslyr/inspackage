@@ -1,33 +1,42 @@
-from rich.console import Console
-from typer import Context, Exit, Option, Typer
+from typing import Optional
 
-from inspackage import __version__
-from inspackage.style import help_message_template
+from typer import Argument, Context, Exit, Option, Typer
 
-c = Console()
-app = Typer()
+from inspackage._callbacks import callback_help, callback_version, check_package_and_path_send
+from inspackage.inspection import get_tree
+from inspackage.style import console, help_message_template
 
-
-@app.command()
-def help_message(flag):
-    if flag:
-        print(help_message_template)
-
-
-@app.command()
-def version(flag):
-    if flag:
-        print(__version__)
-        raise Exit(code=0)
+app = Typer(add_help_option=True)
 
 
 @app.callback(invoke_without_command=True)
 def main(
     ctx: Context,
-    help: bool = Option("-h", "--help", callback=help_message, is_eager=True),
-    version: bool = Option("-v", "--version", callback=version, is_eager=True),
+    help: bool = Option(None, "-h", "--help", callback=callback_help, is_eager=True),
+    version: bool = Option(None, "-v", "--version", callback=callback_version, is_eager=True),
+    env: str = Option(
+        "~/.inspackagerc",
+        "--env",
+        "-e",
+        help="Optional env file to change rules of inspection. Default: ~/.inspackagerc",
+    ),
+    package_path: Optional[str] = Option(None, "--dir", "-d", help="Package path to inspect."),
+    package_name: Optional[str] = Argument(None, help="Package name to inspect."),
 ):
-    if ctx.invoked_subcommand:
-        return
+    ctx.obj = {"package_name": package_name, "package_path": package_path}
+    check_package_and_path_send(ctx)
 
-    print(help_message_template)
+    if ctx.invoked_subcommand is None:
+        if not any(ctx.obj.values()):
+            console.print(help_message_template)
+            raise Exit()
+
+        tree = get_tree(**ctx.obj, env=env)
+        console.print(tree)
+        raise Exit()
+
+    console.print(help_message_template)
+
+
+@app.command()
+def ai(ctx: Context, package_name: Optional[str] = Argument(None, help="Package name to inspect.")): ...

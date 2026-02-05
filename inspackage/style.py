@@ -1,4 +1,6 @@
-from inspackage import __command__
+from rich.console import Console
+
+console = Console()
 
 
 class Icon:
@@ -32,23 +34,22 @@ class Color:
     class_method_returns = "bright_cyan"
 
 
-help_message_template = f"""
-[green]Inspack[/] - Analiser of Structure Python Package.
+help_message_template = r"""[green]Inspackage[/] is an Analiser of Structure Python Package of your env packages.
+[blue]Usage:[/] 
+    inspackage \[options] <package_import_name>
 
-[blue]Usage:[/] {__command__} <package_import_name>
-
-[blue]Examples:[/]
-    {__command__} json
-    {__command__} requests
+[blue]Options:[/]
+    -h --help:      Show this help message.
+    -v --version:   Show current version.
 
 [blue]Label Description:[/]
-    {Icon.folder}  Path (Module)
-    {Icon.file}  Python File
-    {Icon.obj}  Class
-    {Icon.method}  Methods
-    {Icon.var}  Variables
+    {}  Path (Module)
+    {}  Python File
+    {}  Class
+    {}  Methods
+    {}  Variables
 
-"""
+""".format(Icon.folder, Icon.file, Icon.obj, Icon.method, Icon.var)
 
 
-__all__ = ["Icon", "help_message"]
+__all__ = ["console", "Icon", "help_message_template", "Color"]

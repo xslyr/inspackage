@@ -10,7 +10,11 @@ requires-python = ">=3.13,<4.0.0"
 dependencies = [
     "typer[all] (>=0.21.1,<0.22.0)",
     "python-dotenv (>=1.2.1,<2.0.0)",
+    "textual (>=7.5.0,<8.0.0)",
 ]
+
+[project.scripts]
+inspackage = "inspackage.cli:app"
 
 
 [build-system]
@@ -35,9 +39,9 @@ addopts = "--doctest-modules"
 
 
 [tool.taskipy.tasks]
-lint = "pylint inspack/"
-ruff = "ruff format ./inspack && ruff check --fix ./inspack"
-test = "pytest -s -v --cov=inspack"
+lint = "pylint inspackage"
+ruff = "ruff format ./inspackage && ruff check --fix ./inspackage"
+test = "pytest -v --cov=inspackage"
 post_test = "coverage html"
 
 
@@ -48,7 +52,14 @@ ignore-paths = ["^tests/.*$"]
 max-line-length = 120
 
 [tool.pylint."messages control"]
-disable = []
+disable = [
+    "consider-using-f-string",
+    
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    
+]
 
 [tool.ruff]
 line-length = 120

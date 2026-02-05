@@ -4,31 +4,17 @@ import os
 from ast import AnnAssign, Assign, ClassDef, FunctionDef, stmt
 
 from dotenv import load_dotenv
-from rich.console import Console
 from rich.tree import Tree
 
 from inspackage.rules import check_file, check_path
-from inspackage.style import Color, Icon
+from inspackage.style import Color, Icon, console
 
 
-def find_package_path(package_name: str, c: Console):
-    spec = importlib.util.find_spec(package_name)
+def get_tree(package_name="", package_path="", env="~/.inspackagerc"):
+    load_dotenv(env)
 
-    if not spec or not spec.origin:
-        c.print(f"\n[{Color.error}]Error:[/] Package '{package_name}' not found on current venv!\n")
-        raise
-
-    return os.path.dirname(spec.origin)
-
-
-def list_details(c: Console, package_name: str = "", package_path: str = "", env_file: str = "~/.inspackrc"):
-    load_dotenv(env_file)
-
-    if not any([package_name, package_path]):
-        raise Exception("Some parameter `package_name` or `package_path` is needed to inspect.")
-
-    if package_path == "":
-        package_path = find_package_path(package_name, c)
+    if not package_path:
+        package_path = find_package_path(package_name)
 
     mapping = list(os.walk(package_path))
 
@@ -36,8 +22,8 @@ def list_details(c: Console, package_name: str = "", package_path: str = "", env
     root = Tree(f"[{Color.package}]{Icon.eye}  {root_text}[/]")
     tree = {}
 
-    for i in mapping:
-        current_path = os.path.relpath(i[0], package_path)
+    for map_item in mapping:
+        current_path = os.path.relpath(map_item[0], package_path)
         if current_path == ".":
             current_path = "/"
 
@@ -45,19 +31,29 @@ def list_details(c: Console, package_name: str = "", package_path: str = "", env
             tree[current_path] = root.add(f"[{Color.path}] {Icon.folder}  {current_path}[/]")
 
             if current_path != "/":
-                paths = [path for path in i[1] if check_path(path)]
+                paths = [path for path in map_item[1] if check_path(path)]
                 for path in paths:
                     tree[current_path].add(f"[{Color.path}] {Icon.folder}  {path}[/]")
 
-            files = [file for file in i[2] if check_file(file)]
+            files = [file for file in map_item[2] if check_file(file)]
             for file in files:
-                ftree = tree[current_path].add(f"[{Color.file}] {Icon.file}  {file[:-3]}[/]")
-                ftree = _get_file_details(ftree, file, current_path, package_path)
+                ftree = tree[current_path].add(f"[{Color.file}] {Icon.file}  {file}[/]")
+                ftree = __get_file_details(ftree, file, current_path, package_path)
 
-    c.print(root)
+    return root
 
 
-def _get_file_details(tree: Tree, file: str, current_path: str, package_path: str):
+def find_package_path(package_name: str):
+    spec = importlib.util.find_spec(package_name)
+
+    if not spec or not spec.origin:
+        console.print(f"\n[{Color.error}]Error:[/] Package '{package_name}' not found on current venv!\n")
+        raise
+
+    return os.path.dirname(spec.origin)
+
+
+def __get_file_details(tree: Tree, file: str, current_path: str, package_path: str):
     pathfile = os.path.normpath(f"{package_path}/{current_path}/{file}")
 
     file_parse = ast.parse(open(pathfile, "r", encoding="utf-8").read())
@@ -147,41 +143,54 @@ def _create_file_tree_specification(tree: Tree, fitems: dict):
     return tree
 
 
-# TODO: multiassign like a `a,b = 1, 2` bring a tuple. If view it separated, will necessary a split and loop.
 def _check_file_structure(node: stmt, fitems: dict):
     match node:
         case Assign():
-            fitems["variables"].append(ast.unparse(node.targets[0]))
+            if not str(node.targets[0]).startswith("_"):
+                fitems["variables"].append(ast.unparse(node.targets[0]))
 
         case AnnAssign():
-            fitems["variables"].append(f"{ast.unparse(node.target)} : {ast.unparse(node.annotation)}")
+            if not str(node.target).startswith("_"):
+                fitems["variables"].append(f"{ast.unparse(node.target)} : {ast.unparse(node.annotation)}")
 
         case FunctionDef():
-            returns = ast.unparse(node.returns) if node.returns else None
-            fitems["methods"].append((node.name, ast.unparse(node.args), returns))
+            if not str(node.name).startswith("_"):
+                returns = ast.unparse(node.returns) if node.returns else None
+                params = ast.unparse(node.args)
+                for i in ["self,", "self", "cls,", "cls"]:
+                    params = params.replace(i, "")
+                params = str.lstrip(params)
+                fitems["methods"].append((node.name, params, returns))
 
         case ClassDef():
-            citems = {"name": node.name, "constructor": [], "variables": [], "property": [], "methods": []}
-            for i in node.body:
-                match i:
-                    case Assign():
-                        citems["variables"].append(ast.unparse(i.targets[0]))
-                    case AnnAssign():
-                        citems["variables"].append(f"{ast.unparse(i.target)} : {ast.unparse(i.annotation)}")
-                    case FunctionDef():
-                        pre_analysis = ast.unparse(i)
+            if not str(node.name).startswith("_"):
+                citems = {"name": node.name, "constructor": [], "variables": [], "property": [], "methods": []}
+                for i in node.body:
+                    match i:
+                        case Assign():
+                            if not str(i.targets[0]).startswith("_"):
+                                citems["variables"].append(ast.unparse(i.targets[0]))
+                        case AnnAssign():
+                            if not str(i.target).startswith("_"):
+                                citems["variables"].append(f"{ast.unparse(i.target)} : {ast.unparse(i.annotation)}")
+                        case FunctionDef():
+                            pre_analysis = ast.unparse(i)
+                            if "__init__" in pre_analysis or "def _" not in pre_analysis:
+                                if "@property" in pre_analysis:
+                                    citems["property"].append(i.name)
+                                    continue
 
-                        if "@property" in pre_analysis:
-                            citems["property"].append(i.name)
-                            continue
+                                returns = ast.unparse(i.returns) if i.returns else None
+                                params = ast.unparse(i.args)
+                                for rem in ["self,", "self", "cls,", "cls"]:
+                                    params = params.replace(rem, "")
 
-                        returns = ast.unparse(i.returns) if i.returns else None
-                        params = str.lstrip(ast.unparse(i.args).replace("self,", "").replace("cls,", ""))
-                        data = (i.name, params, returns)
-                        insert_on = "constructor" if "__init__" in pre_analysis else "methods"
+                                params = str.lstrip(params)
+                                data = (i.name, params, returns)
+                                insert_on = "constructor" if "__init__" in pre_analysis else "methods"
 
-                        citems[insert_on].append(data)
+                                citems[insert_on].append(data)
 
-            fitems["class"].append(citems)
+                fitems["class"].append(citems)
 
     return fitems
