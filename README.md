@@ -1,2 +1,2 @@
 # inspackage
-Useful tool for general inspection about some python package.
+Useful tool for general inspection of Python packages.
