@@ -3,7 +3,7 @@ from typing import Optional
 from typer import Argument, Context, Exit, Option, Typer
 
 from inspackage._callbacks import callback_help, callback_version, check_package_and_path_send
-from inspackage.inspection import get_tree
+from inspackage._inspection import get_tree
 from inspackage.style import console, help_message_template
 
 app = Typer(add_help_option=True)

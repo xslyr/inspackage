@@ -1,4 +1,4 @@
-from inspackage.inspection import get_tree
+from inspackage._inspection import get_tree
 from inspackage.style import console
 
 

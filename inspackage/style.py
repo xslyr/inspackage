@@ -1,6 +1,11 @@
+from enum import Enum
+
 from rich.console import Console
 
 console = Console()
+
+_ItemsPath = Enum("_ItemsRoot", ["root", "packages", "paths", "files"])
+_ItemsFile = Enum("_ItemsFile", ["classes", "methods", "variables", "properties", "constructors"])
 
 
 class Icon:

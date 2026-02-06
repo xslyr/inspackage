@@ -1,12 +1,3 @@
-# from rich.console import Console
-# from inspackage.inspection import list_details
-# c = Console()
-# # pname = "markdown_it"
-# # pname = "astroid"
-# pname = "dotenv"
-# result = list_details(c, package_name=pname)
-
-
 import sys
 
 from inspackage import cli
@@ -16,5 +7,11 @@ if __name__ == "__main__":
     # sys.argv = ["run.py", "--help"]
     # sys.argv = ["run.py", "--version"]
     # sys.argv = ["run.py", "rich"]
+
     sys.argv = ["run.py", "dotenv"]
     cli.app()
+
+    # pasta = "/home/xsly/Documentos/wspace/inspackage/.venv/lib/python3.13/site-packages/textual"
+    # r = __get_dict_path_structure(pasta)
+
+    # print(r)

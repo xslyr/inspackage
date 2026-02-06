@@ -211,3 +211,4 @@ archived
 .virtual_documents/
 
 TODO.md
+*.ipynb
