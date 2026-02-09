@@ -2,19 +2,21 @@ from enum import Enum
 
 from rich.console import Console
 
-console = Console()
+from inspackage import __version__
+
+console = Console(record=True, width=200)
 
 _ItemsPath = Enum("_ItemsRoot", ["root", "packages", "paths", "files"])
 _ItemsFile = Enum("_ItemsFile", ["classes", "methods", "variables", "properties", "constructors"])
 
 
 class Icon:
-    eye = "\uf06e"
-    folder = "\uf115"  # "\uf07b"
-    file = "\uf0c5"
-    obj = "\uf0e8"
-    var = "\uf02b"
-    method = "\uf0ad"
+    packages = "📦"
+    paths = "🗁"
+    files = "🗎"
+    classes = "🏗️"
+    variables = "🏷️"
+    methods = "🔧"
 
 
 class Color:
@@ -39,22 +41,38 @@ class Color:
     class_method_returns = "bright_cyan"
 
 
-help_message_template = r"""[green]Inspackage[/] is an Analiser of Structure Python Package of your env packages.
-[blue]Usage:[/] 
-    inspackage \[options] <package_import_name>
+help_message_template = r"""[green]Inspackage[/]({}) is an Analiser of Structure Python Package of your env packages.
+[bright_blue]Usage:[/] 
+  inspackage \[options] <package_name_or_path>
 
-[blue]Options:[/]
-    -h --help:      Show this help message.
-    -v --version:   Show current version.
+[bright_blue]Options:[/]
+  -h, --help            Show this help message
+  -i, --interactive     Enable interactive mode
+  -v, --verbose         Verbose mode
+  -s, --save            Save inspection on file
+  --version:            Show current version
 
-[blue]Label Description:[/]
-    {}  Path (Module)
-    {}  Python File
-    {}  Class
-    {}  Methods
-    {}  Variables
+""".format(__version__)
 
-""".format(Icon.folder, Icon.file, Icon.obj, Icon.method, Icon.var)
+textual_tree_themes = """
+textual-dark
+textual-light
+nord
+gruvbox
+catppuccin-mocha
+dracula
+tokyo-night
+monokai
+flexoki
+catppuccin-late
+solarized-light
+solarized-dark
+rose-pine
+rose-pine-moon
+rose-pine-dwan
+atom-one-dark
+atom-one-light
+"""
 
 
 __all__ = ["console", "Icon", "help_message_template", "Color"]

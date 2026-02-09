@@ -1,4 +1,4 @@
-from typer import Context, Exit
+from typer import Exit
 
 from inspackage import __version__
 from inspackage.exception import DefaultExceptions
@@ -19,8 +19,14 @@ def callback_version(value: bool):
         raise Exit()
 
 
-def check_package_and_path_send(ctx: Context):
+def check_if_both_params_sent(params: list):
     """Função de verificar se ambos parametros package e directory foram enviados."""
-    if all(ctx.obj.values()):
+    if all(params):
         console.print(DefaultExceptions.package_and_path_send)
+        raise Exit(code=1)
+
+
+def check_only_one_params_sent(params: list):
+    if not any(params):
+        console.print(help_message_template)
         raise Exit()

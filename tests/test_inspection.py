@@ -1,11 +1,7 @@
-from inspackage._inspection import get_tree
-from inspackage.style import console
+from inspackage._inspection import get_tree_map
 
 
 def test_inspection_must_construct_tree(capsys):
     package_name = "dotenv"
-    tree = get_tree(package_name)
-    console.print(tree)
-    captured = capsys.readouterr()
-    assert package_name in captured.out
-    assert "Methods:" in captured.out
+    tree = get_tree_map(package_name)
+    assert tree["name"] == package_name

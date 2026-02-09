@@ -1,10 +1,19 @@
+import os
+from pathlib import Path
 from typing import Optional
 
+from dotenv import load_dotenv
 from typer import Argument, Context, Exit, Option, Typer
 
-from inspackage._callbacks import callback_help, callback_version, check_package_and_path_send
-from inspackage._inspection import get_tree
+from inspackage._callbacks import (
+    callback_help,
+    callback_version,
+    check_if_both_params_sent,
+    check_only_one_params_sent,
+)
+from inspackage._inspection import get_tree_map
 from inspackage.style import console, help_message_template
+from inspackage.tree import InspackageApp, TreeBuilder
 
 app = Typer(add_help_option=True)
 
@@ -13,30 +22,55 @@ app = Typer(add_help_option=True)
 def main(
     ctx: Context,
     help: bool = Option(None, "-h", "--help", callback=callback_help, is_eager=True),
-    version: bool = Option(None, "-v", "--version", callback=callback_version, is_eager=True),
-    env: str = Option(
-        "~/.inspackagerc",
+    version: bool = Option(None, "--version", callback=callback_version, is_eager=True),
+    static: bool = Option(False, "--static"),
+    verbose: bool = Option(False, "-v", "--verbose"),
+    save: bool = Option(False, "-s", "--save"),
+    env: Path = Option(
+        Path("~/.inspackagerc").expanduser(),
         "--env",
         "-e",
-        help="Optional env file to change rules of inspection. Default: ~/.inspackagerc",
+        help="Optional env file to change rules & prefered styles. Default: ~/.inspackagerc",
+        exists=False,
+        dir_okay=False,
+        readable=True,
     ),
-    package_path: Optional[str] = Option(None, "--dir", "-d", help="Package path to inspect."),
-    package_name: Optional[str] = Argument(None, help="Package name to inspect."),
+    package_path: Optional[Path] = Option(None, "--dir", "-d", help="Package path to inspect."),
+    package_name: Optional[str] = Argument("", help="Package name to inspect."),
 ):
-    ctx.obj = {"package_name": package_name, "package_path": package_path}
-    check_package_and_path_send(ctx)
+    try:
+        _package_path = package_path.expanduser().as_posix()  # type: ignore
+    except AttributeError:
+        _package_path = ""
+
+    check_if_both_params_sent([package_name, _package_path])
+
+    load_dotenv(env.as_posix(), override=True)
+
+    ctx.obj = {
+        "static": static,
+        "save": save,
+        "verbose": verbose,
+        "package_name": package_name,
+        "package_path": _package_path,
+    }
 
     if ctx.invoked_subcommand is None:
-        if not any(ctx.obj.values()):
-            console.print(help_message_template)
-            raise Exit()
+        check_only_one_params_sent([package_name, _package_path])
 
-        tree = get_tree(**ctx.obj, env=env)
-        console.print(tree)
+        tree_map = get_tree_map(package_name, _package_path)
+        tree = TreeBuilder(ctx).build(tree_map)
+        if static:
+            console.print(tree)
+        else:
+            app = InspackageApp(tree)  # type: ignore
+            app.run()
+
+        if save:
+            console.print(tree)
+            filename = package_name or os.path.basename(_package_path)
+            console.save_text(filename)
+
         raise Exit()
 
     console.print(help_message_template)
-
-
-@app.command()
-def ai(ctx: Context, package_name: Optional[str] = Argument(None, help="Package name to inspect.")): ...
