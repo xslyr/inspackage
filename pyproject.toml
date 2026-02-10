@@ -7,22 +7,31 @@ Homepage = "https://github.com/xslyr/inspackage"
 Documentation = "https://github.com/xslyr/inspackage#readme"
 Repository = "https://github.com/xslyr/inspackage.git"
 Issues = "https://github.com/xslyr/inspackage/issues"
-
 readme = "README.md"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: Utilities",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+]
 requires-python = ">=3.13,<4.0.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[project.scripts]
+inspackage = "inspackage.cli:typer_app"
+
 dependencies = [
     "typer[all] (>=0.21.1,<0.22.0)",
     "python-dotenv (>=1.2.1,<2.0.0)",
     "textual (>=7.5.0,<8.0.0)",
 ]
-
-[project.scripts]
-inspackage = "inspackage.cli:app"
-
-
-[build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
-build-backend = "poetry.core.masonry.api"
 
 [dependency-groups]
 dev = [
@@ -32,7 +41,6 @@ dev = [
     "pytest (>=9.0.2,<10.0.0)",
     "pytest-cov (>=7.0.0,<8.0.0)"
 ]
-
 
 [tool.pytest.ini_options]
 pythonpath = "."
@@ -57,11 +65,15 @@ max-line-length = 120
 [tool.pylint."messages control"]
 disable = [
     "consider-using-f-string",
-    
     "missing-module-docstring",
     "missing-class-docstring",
     "missing-function-docstring",
-    
+    "too-many-arguments",
+    "too-many-positional-arguments",
+    "redefined-builtin",
+    "unused-argument",
+    "too-few-public-methods",
+    "too-many-branches"
 ]
 
 [tool.ruff]

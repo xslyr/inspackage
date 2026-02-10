@@ -7,20 +7,20 @@ from dotenv import load_dotenv
 from typer import Argument, Context, Exit, Option, Typer
 
 from inspackage._callbacks import (
+    HELP_MESSAGE_TEMPLATE,
     callback_help,
     callback_version,
     check_if_both_params_sent,
     check_only_one_params_sent,
     console,
-    help_message_template,
 )
 from inspackage._inspection import get_tree_map
 from inspackage.tree import InspackageApp, TreeBuilder
 
-app = Typer(add_help_option=True)
+typer_app = Typer(add_help_option=True)
 
 
-@app.callback(invoke_without_command=True)
+@typer_app.callback(invoke_without_command=True)
 def main(
     ctx: Context,
     help: bool = Option(None, "-h", "--help", callback=callback_help, is_eager=True),
@@ -65,8 +65,8 @@ def main(
         if static:
             console.print(tree)
         else:
-            app = InspackageApp(tree)  # type: ignore
-            app.run()
+            interactive_app = InspackageApp(tree)  # type: ignore
+            interactive_app.run()
 
         if save:
             filename = package_name or os.path.basename(_package_path)
@@ -75,4 +75,4 @@ def main(
 
         raise Exit()
 
-    console.print(help_message_template)
+    console.print(HELP_MESSAGE_TEMPLATE)

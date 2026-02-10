@@ -4,6 +4,8 @@ import os
 from ast import AnnAssign, Assign, ClassDef, FunctionDef, stmt
 from collections import defaultdict
 
+from typer import Exit
+
 from inspackage._callbacks import console
 from inspackage.exception import DefaultExceptions
 
@@ -26,7 +28,7 @@ def find_package_path(package_name: str):
 
     if not spec or not spec.origin:
         console.print(DefaultExceptions.package_not_found.format(package_name))
-        raise
+        raise Exit(code=1)
 
     return os.path.dirname(spec.origin)
 
@@ -36,23 +38,21 @@ def __get_path_map(path: str):
 
     name = os.path.basename(path)
 
-    if not os.path.isdir(path) and ".py" in name:  # and not name.startswith("_") and not name.startswith("."):
-        file_parse = ast.parse(open(path, "r", encoding="utf-8").read())
-        file_structure = defaultdict(list)
-        for item in file_parse.body:
-            file_structure = __get_file_map(item, file_structure)
-        return {"name": name, "category": "file", "structure": dict(file_structure)}
+    if not os.path.isdir(path) and ".py" in name and not name.startswith("_") and not name.startswith("."):
+        with open(path, "r", encoding="utf-8") as file:
+            file_parse = ast.parse(file.read())
+            file_structure = defaultdict(list)
+            for item in file_parse.body:
+                file_structure = __get_file_map(item, file_structure)
+            return {"name": name, "category": "file", "structure": dict(file_structure)}
 
-    elif os.path.isdir(path):  # and not name.startswith("_") and not name.startswith("."):
+    if os.path.isdir(path) and not name.startswith("_") and not name.startswith("."):
         data = {"name": name, "category": "directory", "nodes": []}
-        try:
-            with os.scandir(path) as it:
-                for entry in it:
-                    result = __get_path_map(entry.path)
-                    if result:
-                        data["nodes"].append(result)
-        except PermissionError:
-            pass
+        with os.scandir(path) as it:
+            for entry in it:
+                result = __get_path_map(entry.path)
+                if result:
+                    data["nodes"].append(result)
         return data
 
     return {}

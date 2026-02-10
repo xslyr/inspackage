@@ -11,14 +11,16 @@ Built with [Typer](https://typer.tiangolo.com/) and [Textual](https://textual.te
 
 ---
 
+
 ## ✨ Features
 
 - **🗂 Interactive Tree View**: Navigate through folders and files using a rich TUI (Text User Interface).
 - **🔍 Deep Inspection**: Don't just stop at the file level. Inspect the *internals* of your Python files:
-    - Classes & Constructors (`__init__`)
+    - Classes & Constructors 
     - Methods & Properties
     - Global Variables & Constants
 - **⚡ Fast & Lightweight**: optimized for quick navigation of large codebases.
+
 
 ## 🚀 Installation
 
@@ -38,26 +40,29 @@ inspackage .
 
 # Inspect the package on current venv
 inspackage <package-name>
+
+# Inspect a specific package path
+inspackage --dir /path/to/python/project
 ```
 
 The basic inspection runs on Interactive Mode, so to navigation 
 
 - Use the Arrow Keys to navigate the tree.
-- Press Space to expand/collapse directories or file details.
-- Press Q to exit or D to toggle between dark/light mode.
+- Press `Enter` or `Space` to expand/collapse directories or file details.
+- Press `Q` to quit or `D` to toggle display between dark/light mode.
 - To inspect some dir use --dir
 - To non-interactive mode use --static (Static print on console)
 - To save inspection on json use --save
 
 ```bash
-# Inspect a specific package path
-inspackage --dir /path/to/python/project
-
 # Inspection printed as a static data on console
 inspackage --static <package-name>
 
 # Save inspection as a json file
 inspackage --save <package-name>
+
+# To check comands
+inspackage --help
 ```
 
 

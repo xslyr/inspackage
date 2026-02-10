@@ -126,8 +126,7 @@ class TreeBuilder:
         if isinstance(parent_node, TextualTree):
             if category in TreeBuilder.FINAL_NODES:
                 return parent_node.add(formatted_txt, allow_expand=False)
-            else:
-                return parent_node.add(formatted_txt, expand=expand)
+            return parent_node.add(formatted_txt, expand=expand)
 
         return parent_node.add(formatted_txt)
 

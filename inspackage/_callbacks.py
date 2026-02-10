@@ -6,18 +6,8 @@ from inspackage.exception import DefaultExceptions
 
 console = Console()
 
-
-class Icon:
-    packages = "📦"
-    paths = "🗁"
-    files = "🗎"
-    classes = "🏗️"
-    variables = "🏷️"
-    methods = "🔧"
-
-
-help_message_template = r"""[green]Inspackage[/]({}) is an Analiser of Structure Python Package of your env packages.
-[bright_blue]Usage:[/] 
+HELP_MESSAGE_TEMPLATE = r"""[green]Inspackage[/]({}) is an Analiser of Structure Python Package of your env packages.
+[bright_blue]Usage:[/]
   inspackage \[options] <package_name_or_path>
 
 [bright_blue]Options:[/]
@@ -33,7 +23,7 @@ help_message_template = r"""[green]Inspackage[/]({}) is an Analiser of Structure
 def callback_help(value: bool):
     """Função de callback para a opção --help."""
     if value:
-        console.print(help_message_template)
+        console.print(HELP_MESSAGE_TEMPLATE)
         raise Exit()
 
 
@@ -53,5 +43,14 @@ def check_if_both_params_sent(params: list):
 
 def check_only_one_params_sent(params: list):
     if not any(params):
-        console.print(help_message_template)
+        console.print(HELP_MESSAGE_TEMPLATE)
         raise Exit()
+
+
+class Icon:
+    packages = "📦"
+    paths = "🗁"
+    files = "🗎"
+    classes = "🏗️"
+    variables = "🏷️"
+    methods = "🔧"
