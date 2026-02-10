@@ -34,4 +34,4 @@ jobs:
         run: poetry run task lint
 
       - name: Check tests          
-        run: poetry run task test_github
+        run: poetry run task test
