@@ -7,7 +7,7 @@ env:
 
 jobs:
 
-  check linting and tests:
+  check_linting_and_tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
