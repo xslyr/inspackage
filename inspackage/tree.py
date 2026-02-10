@@ -8,7 +8,7 @@ from textual.widgets import Footer, Header, Tree
 from textual.widgets.tree import TreeNode as TextualTree
 from typer import Context
 
-from inspackage.style import Icon
+from inspackage._callbacks import Icon
 
 NodeType = RichTree | TextualTree
 CategoryStyle = Enum(

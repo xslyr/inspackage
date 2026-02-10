@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 from typing import Optional
@@ -10,9 +11,10 @@ from inspackage._callbacks import (
     callback_version,
     check_if_both_params_sent,
     check_only_one_params_sent,
+    console,
+    help_message_template,
 )
 from inspackage._inspection import get_tree_map
-from inspackage.style import console, help_message_template
 from inspackage.tree import InspackageApp, TreeBuilder
 
 app = Typer(add_help_option=True)
@@ -67,10 +69,14 @@ def main(
             app.run()
 
         if save:
-            console.print(tree)
             filename = package_name or os.path.basename(_package_path)
-            console.save_text(filename)
+            with open(f"{filename}.json", "w", encoding="utf-8") as f:
+                json.dump(tree_map, f, indent=4, ensure_ascii=False)
 
         raise Exit()
 
     console.print(help_message_template)
+
+
+if __name__ == "__main__":
+    app()
