@@ -1,6 +1,6 @@
 [project]
 name = "inspackage"
-version = "0.1.0"
+version = "0.1.1"
 description = "Useful tool for general inspection about some python package."
 authors = [{name = "xslyr",email = "wesleysilv@gmail.com"}]
 Homepage = "https://github.com/xslyr/inspackage"
@@ -18,7 +18,7 @@ classifiers = [
     "Operating System :: OS Independent",
     "Environment :: Console",
 ]
-requires-python = ">=3.13,<4.0.0"
+requires-python = ">=3.10,<4.0.0"
 
 dependencies = [
     "typer[all] (>=0.21.1,<0.22.0)",
@@ -32,8 +32,6 @@ build-backend = "poetry.core.masonry.api"
 
 [project.scripts]
 inspackage = "inspackage.cli:typer_app"
-
-
 
 [dependency-groups]
 dev = [

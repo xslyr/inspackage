@@ -5,12 +5,11 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
-**Inspackage** is a powerful CLI tool designed to inspect Python packages with ease. It provides an interactive, hierarchical tree view of your project's structure, allowing you to dive deep into files to visualize classes, methods, variables, and properties directly from your terminal.
+**Inspackage** is a CLI tool designed to inspect Python packages with ease. It provides an interactive, hierarchical tree view of your project's structure, allowing you to dive deep into files to visualize classes, methods, variables, and properties directly from your terminal.
 
 Built with [Typer](https://typer.tiangolo.com/) and [Textual](https://textual.textualize.io/).
 
 ---
-
 
 ## ✨ Features
 
@@ -44,16 +43,14 @@ inspackage <package-name>
 # Inspect a specific package path
 inspackage --dir /path/to/python/project
 ```
+<img src="https://raw.githubusercontent.com/xslyr/inspackage/refs/heads/main/asset/basic-demo.gif" width=400px style="margin-left:50px">
 
-The basic inspection runs on Interactive Mode, so to navigation 
-
+The basic inspection runs on Interactive Mode, here you can
 - Use the Arrow Keys to navigate the tree.
 - Press `Enter` or `Space` to expand/collapse directories or file details.
 - Press `Q` to quit or `D` to toggle display between dark/light mode.
-- To inspect some dir use --dir
-- To non-interactive mode use --static (Static print on console)
-- To save inspection on json use --save
 
+Other ways to use this tool:
 ```bash
 # Inspection printed as a static data on console
 inspackage --static <package-name>
@@ -61,9 +58,12 @@ inspackage --static <package-name>
 # Save inspection as a json file
 inspackage --save <package-name>
 
-# To check comands
+# To check all comands
 inspackage --help
 ```
+
+
+<br>
 
 
 ## 🛠 Development
