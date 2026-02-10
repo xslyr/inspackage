@@ -2,9 +2,12 @@
 name = "inspackage"
 version = "0.1.0"
 description = "Useful tool for general inspection about some python package."
-authors = [
-    {name = "xslyr",email = "wesleysilv@gmail.com"}
-]
+authors = [{name = "xslyr",email = "wesleysilv@gmail.com"}]
+Homepage = "https://github.com/xslyr/inspackage"
+Documentation = "https://github.com/xslyr/inspackage#readme"
+Repository = "https://github.com/xslyr/inspackage.git"
+Issues = "https://github.com/xslyr/inspackage/issues"
+
 readme = "README.md"
 requires-python = ">=3.13,<4.0.0"
 dependencies = [

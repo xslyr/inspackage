@@ -76,7 +76,3 @@ def main(
         raise Exit()
 
     console.print(help_message_template)
-
-
-if __name__ == "__main__":
-    app()
