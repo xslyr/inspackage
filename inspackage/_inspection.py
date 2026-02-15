@@ -8,6 +8,7 @@ from typer import Exit
 
 from inspackage._callbacks import console
 from inspackage.exception import DefaultExceptions
+from inspackage.rules import checkrules_filename, checkrules_pathname
 
 
 def get_tree_map(package_name: str | None = "", package_path: str = "") -> dict:
@@ -38,15 +39,15 @@ def __get_path_map(path: str):
 
     name = os.path.basename(path)
 
-    if not os.path.isdir(path) and ".py" in name and not name.startswith("_") and not name.startswith("."):
-        with open(path, "r", encoding="utf-8") as file:
+    if not os.path.isdir(path) and ".py" in name and checkrules_filename(name):
+        with open(path, "r") as file:
             file_parse = ast.parse(file.read())
             file_structure = defaultdict(list)
             for item in file_parse.body:
                 file_structure = __get_file_map(item, file_structure)
             return {"name": name, "category": "file", "structure": dict(file_structure)}
 
-    if os.path.isdir(path) and not name.startswith("_") and not name.startswith("."):
+    if os.path.isdir(path) and checkrules_pathname(name):
         data = {"name": name, "category": "directory", "nodes": []}
         with os.scandir(path) as it:
             for entry in it:

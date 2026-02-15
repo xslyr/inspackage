@@ -1,6 +1,6 @@
 [project]
 name = "inspackage"
-version = "0.1.1"
+version = "0.1.2"
 description = "Useful tool for general inspection about some python package."
 authors = [{name = "xslyr",email = "wesleysilv@gmail.com"}]
 Homepage = "https://github.com/xslyr/inspackage"
@@ -31,6 +31,9 @@ requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [project.scripts]
+inspackage = "inspackage.cli:typer_app"
+
+[tool.poetry.scripts]
 inspackage = "inspackage.cli:typer_app"
 
 [dependency-groups]
