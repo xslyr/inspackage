@@ -41,11 +41,14 @@ def __get_path_map(path: str):
 
     if not os.path.isdir(path) and ".py" in name and checkrules_filename(name):
         with open(path, "r") as file:
-            file_parse = ast.parse(file.read())
-            file_structure = defaultdict(list)
-            for item in file_parse.body:
-                file_structure = __get_file_map(item, file_structure)
-            return {"name": name, "category": "file", "structure": dict(file_structure)}
+            try:
+                file_parse = ast.parse(file.read())
+                file_structure = defaultdict(list)
+                for item in file_parse.body:
+                    file_structure = __get_file_map(item, file_structure)
+                return {"name": name, "category": "file", "structure": dict(file_structure)}
+            except SyntaxError:
+                return {}
 
     if os.path.isdir(path) and checkrules_pathname(name):
         data = {"name": name, "category": "directory", "nodes": []}
