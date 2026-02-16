@@ -19,7 +19,8 @@ def get_tree_map(package_name: str | None = "", package_path: str = "") -> dict:
     else:
         package_path = find_package_path(package_name)  # type: ignore
 
-    return __get_path_map(package_path) if package_path else {}
+    map = __get_path_map(package_path) if package_path else {"name": "", "category": "", "structure": ""}
+    return map
 
 
 def find_package_path(package_name: str):

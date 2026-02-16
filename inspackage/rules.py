@@ -52,34 +52,39 @@ rule_list = {
 
 rule_config = {"paths": [], "files": [], "file_content": []}
 
-for item in rule_config.keys():
-    if item == "file_content":
-        for key, value in rule_list["file_content"].items():
-            if "rules" in key:
-                for rule in value:
-                    rule_config[item].append((rule[0], os.getenv(rule[0], rule[1])))
+for category, rule_group in rule_config.items():
+    if category == "file_content":
+        for rule_name, rule_value in rule_list["file_content"].items():
+            if "rules" in rule_name:
+                for item in rule_value:
+                    rule_group.append((item[0], bool(os.getenv(item[0], item[1]))))
             else:
-                rule_config[item].append((key, os.getenv(key, value)))
+                rule_group.append((rule_name, bool(os.getenv(rule_name, rule_value))))
 
     else:
-        for rule in rule_list[item]:
-            rule_config[item].append((rule[0], os.getenv(rule[0], rule[1])))
+        for rule_name, rule_value in rule_list[category]:
+            default_value = None
+            if rule_name == "RULE_PATH_EXCLUDE_DIRS":
+                default_value = list(os.getenv(rule_name, rule_value))
+            else:
+                default_value = bool(os.getenv(rule_name, rule_value))
+            rule_group.append((rule_name, default_value))
 
 
 def checkrules_pathname(pathname: str):
     result = []
-    for key, value in rule_config["paths"]:
-        match key:
+    for k, v in rule_config["paths"]:
+        match k:
             case "RULE_PATH_STARTSWITH_UNDERLINE":
-                if value:
+                if v:
                     result.append(pathname.startswith("_"))
                 continue
             case "RULE_PATH_STARTSWITH_DOT":
-                if value:
+                if v:
                     result.append(pathname.startswith("."))
                 continue
             case "RULE_PATH_EXCLUDE_DIRS":
-                result.append(pathname not in value)
+                result.append(pathname not in v)
                 continue
 
     return all(result)
@@ -87,20 +92,20 @@ def checkrules_pathname(pathname: str):
 
 def checkrules_filename(filename: str):
     result = []
-    for key, value in rule_config["files"]:
-        match key:
+    for k, v in rule_config["files"]:
+        match k:
             case "RULE_FILE_INCLUDE_INIT_":
                 if filename == "__init__.py":
-                    result.append(value)
+                    result.append(v)
                 continue
 
             case "RULE_FILE_STARTSWITH_UNDERLINE":
                 if filename != "__init__.py":
-                    result.append(filename.startswith("_") == value)
+                    result.append(filename.startswith("_") == v)
                 continue
 
             case "RULE_FILE_STARTSWITH_DOT":
-                result.append(filename.startswith(".") == value)
+                result.append(filename.startswith(".") == v)
                 continue
 
     return all(result)
@@ -109,44 +114,44 @@ def checkrules_filename(filename: str):
 def checkrules_file_content(node: stmt):
     result = []
 
-    if isinstance(node, Assign) or isinstance(node, AnnAssign):
+    if isinstance(node, (Assign, AnnAssign)):
         if not rule_config["RULE_VARIABLE_INCLUDE"]:
             return False
-        else:
-            for key, value in rule_config["variable_rules"]:
-                match key:  # match case here to stay prepared for another rules
-                    case "RULE_VARIABLE_STARTSWITH_UNDERLINE":
-                        if isinstance(node, Assign):
-                            result.append(str(node.targets[0]).startswith("_") == value)
-                        else:
-                            result.append(str(node.target).startswith("_") == value)
-                continue
+
+        for k, v in rule_config["variable_rules"]:
+            match k:  # match case here to stay prepared for another rules
+                case "RULE_VARIABLE_STARTSWITH_UNDERLINE":
+                    if isinstance(node, Assign):
+                        result.append(str(node.targets[0]).startswith("_") == v)
+                    else:
+                        result.append(str(node.target).startswith("_") == v)
+            continue
 
     if isinstance(node, FunctionDef):
         if not rule_config["RULE_METHODS_INCLUDE"]:
             return False
-        else:
-            for key, value in rule_config["method_rules"]:
-                match key:
-                    case "RULE_METHOD_STARTSWITH_UNDERLINE":
-                        ...
-                    case "RULE_PROPERTY_STARTSWITH_UNDERLINE":
-                        ...
-                continue
+
+        for k, v in rule_config["method_rules"]:
+            match k:
+                case "RULE_METHOD_STARTSWITH_UNDERLINE":
+                    ...
+                case "RULE_PROPERTY_STARTSWITH_UNDERLINE":
+                    ...
+            continue
 
     if isinstance(node, ClassDef):
         if not rule_config["RULE_CLASS_INCLUDE"]:
             return False
-        else:
-            for key, value in rule_config["class_rules"]:
-                match key:
-                    case "RULE_CLASS_STARTSWITH_UNDERLINE":
-                        ...
-                    case "RULE_CLASS_CONSTRUCTOR":
-                        ...
-                    case "RULE_CLASS_MAGIC_METHODS":
-                        ...
-                    case "RULE_CLASS_ANOTHER_METHODS_UNDERLINE":
-                        ...
+
+        for k, v in rule_config["class_rules"]:
+            match k:
+                case "RULE_CLASS_STARTSWITH_UNDERLINE":
+                    ...
+                case "RULE_CLASS_CONSTRUCTOR":
+                    ...
+                case "RULE_CLASS_MAGIC_METHODS":
+                    ...
+                case "RULE_CLASS_ANOTHER_METHODS_UNDERLINE":
+                    ...
 
     return all(result)

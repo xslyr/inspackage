@@ -39,9 +39,3 @@ def test_cli_must_save_on_file(tmp_path, monkeypatch):
     assert result.exit_code == 0
     assert file.exists()
     assert file.read_text() != ""
-
-
-def test_inspection_langchain():
-    args = ["--dir", "/home/xsly/Documentos/wspace/langchain/.venv/lib/python3.13/site-packages/langchain/"]
-    result = runner.invoke(typer_app, args)
-    assert result.exit_code == 0

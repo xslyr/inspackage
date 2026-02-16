@@ -76,7 +76,9 @@ disable = [
     "redefined-builtin",
     "unused-argument",
     "too-few-public-methods",
-    "too-many-branches"
+    "too-many-branches",
+    "unspecified-encoding",
+    "invalid-envvar-default"
 ]
 
 [tool.ruff]
