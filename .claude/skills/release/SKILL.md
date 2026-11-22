@@ -12,7 +12,7 @@ publicação por Trusted Publishing). Não existe `poetry publish` no fluxo. Det
 2. Leia `CHANGELOG.md` (`Unreleased`) e `git log <última-tag>..HEAD --oneline`; proponha a versão pela política do próprio
    CHANGELOG: em 0.x, minor para features e mudanças incompatíveis, patch só para correções. Se não houver tag anterior,
    use o commit `451ca84` (versão 0.1.1) como base do log.
-3. Delegue ao sub-agente `release-manager`: `PYENV_VERSION=system poetry version <nova>`, mover `Unreleased` para a nova seção com data de hoje (e recriar `Unreleased` vazio, atualizando os links do rodapé), conferir classifiers/deps/extras.
+3. Delegue ao sub-agente `release-manager`: `PYENV_VERSION=system poetry version <nova>` seguido de `PYENV_VERSION=system poetry install` (o `__version__` vem dos metadados instalados, então sem reinstalar o `/qa` veria a versão antiga), mover `Unreleased` para a nova seção com data de hoje (e recriar `Unreleased` vazio). Atualize os links do rodapé como descrito em `docs/RELEASING.md`: `[X.Y.Z]` compara a última tag (ou `90d42e6` se não houver tag anterior) com `vX.Y.Z`, e `[Unreleased]` compara `vX.Y.Z...HEAD`. Conferir classifiers/deps/extras.
 4. Build e validação:
    ```bash
    export PYENV_VERSION=system
@@ -23,14 +23,19 @@ publicação por Trusted Publishing). Não existe `poetry publish` no fluxo. Det
    "$SCRATCH/relvenv/bin/inspackage" json --format tree | head -5
    ```
    (`$SCRATCH` = diretório de scratchpad da sessão.) Confira no `unzip -l dist/*.whl` que `inspackage/py.typed` está presente e que não há `tests/`.
-5. **Pare aqui.** Mostre ao usuário: versão, changelog, resultado da validação e os comandos pendentes, nesta ordem:
+5. **Pare aqui.** Mostre ao usuário: versão, changelog, resultado da validação e os passos pendentes, nesta ordem:
    ```bash
-   # 1. commit da release (PR mergeada na main pelo usuário)
+   # 1. commit da release e push da branch (exige aprovação explícita do usuário)
    git commit -am "release: vX.Y.Z"
-   # 2. depois do merge, na main atualizada e com o pipeline verde
+   git push origin <branch>
+   # 2. abrir o PR para a main (exige aprovação explícita do usuário); o merge é feito pelo usuário na web
+   gh pr create --base main --title "release: vX.Y.Z" --body "..."
+   # 3. depois do merge, na main atualizada e com o pipeline verde (exige aprovação explícita do usuário)
    git switch main && git pull --ff-only
    git tag -a vX.Y.Z -m "vX.Y.Z"
    git push origin vX.Y.Z   # dispara publish.yml
    ```
-   Só a tag publica. Se a versão da tag não bater com o `pyproject.toml`, o job `build` falha antes de qualquer envio.
-   Execute qualquer um deles apenas com aprovação explícita do usuário.
+   A tag só é criada depois do merge na `main`; nunca antes. O workflow `publish.yml` também falha se o commit da tag não
+   estiver na `main`. Só a tag publica. Se a versão da tag não bater com o `pyproject.toml`, o job `build` falha antes de
+   qualquer envio.
+   Execute qualquer um desses passos apenas com aprovação explícita do usuário.

@@ -54,6 +54,11 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 - `--version` lê a versão dos metadados instalados (`importlib.metadata`). (#23)
 - Dependências: `rich` declarado explicitamente; extra `[all]` do `typer` removido (a versão 0.21 não o publica).
   Classifiers para Python 3.10 a 3.13. (#23)
+- `--format html`, `md`, `llm` e `graph` são reconhecidos, mas ainda não existem: respondem com erro de uso
+  (saída `1`, "não disponível nesta versão"). (#15)
+- `-o/--output` grava de forma atômica (arquivo temporário trocado por `os.replace`) e, sem `--format`, infere o
+  formato pela extensão. (#15)
+- `rich` passa a exigir `>=14.2`, a versão que o `textual` 7.5 suporta. (#23)
 
 ### Deprecated
 - `--static`: use `--format tree`. Imprime aviso no stderr. (#15)
@@ -81,11 +86,24 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 - B17 (#23): `rich` era usado sem ser declarado; os classifiers citavam só Python 3.13; a versão estava duplicada em
   `__init__.py`.
 - B18 (#12): asserts dentro de `pytest.raises` nunca executavam, havia teste vazio e testes dependiam de pacotes do venv.
+- Markup Rich na árvore: anotações como `list[int]` sumiam e um `"[/x]"` no código inspecionado derrubava a
+  renderização. Os rótulos agora são escapados. (#9)
+- Mensagens de erro que ecoam o alvo digitado não interpretam mais markup: `inspackage '/nonexist[/]'` gerava
+  `MarkupError`. (#3, #5)
+- Broken pipe (ex.: `inspackage ... | head`) agora sai em silêncio com código `0`, sem mensagem de erro. (#15)
+- `RecursionError` e outras exceções inesperadas na coleta de um módulo viram entrada em `errors` em vez de abortar a
+  inspeção. (#5)
+- Namespace package dividido em vários diretórios é mesclado: subpacotes de mesmo nome são unidos. (#3)
+- Nome com `-` (ex.: `typing-extensions`) passa a sugerir o nome com `_` (`typing_extensions`). (#3)
+- Todos os `__init__` da classe são exibidos, não só o primeiro. (#9)
+- Definições dentro de `if`, `try`, `else` e `finally` no topo do módulo e no corpo de classe são coletadas. (#7)
+- Stubs `@overload` são descartados quando há implementação, sem duplicatas na saída. (#7)
+- `--env`: o help não expõe mais o caminho da home do usuário. (#11)
 
 ## [0.1.1]
 
 Linha de base: versão publicada no PyPI antes deste changelog. Contém a TUI (Textual) de árvore de pacotes e as opções
 `--static`, `--save`, `--dir`, `-v/--verbose` e `-e/--env`.
 
-[Unreleased]: https://github.com/xslyr/inspackage/compare/v0.1.1...HEAD
-[0.1.1]: https://github.com/xslyr/inspackage/releases/tag/v0.1.1
+[Unreleased]: https://github.com/xslyr/inspackage/compare/90d42e6...HEAD
+[0.1.1]: https://pypi.org/project/inspackage/0.1.1/
