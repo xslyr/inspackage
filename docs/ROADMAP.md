@@ -15,7 +15,7 @@ Milestones: [v0.2.0](https://github.com/xslyr/inspackage/milestone/1) · [v0.3.0
 | B01 [#3](https://github.com/xslyr/inspackage/issues/3) ✅ | `cli.py:41` / `_inspection.py:27` | `inspackage .` (exemplo do README) quebra: `.` é tratado como nome de pacote → `ImportError` com traceback. | ✅ rodado |
 | B02 [#3](https://github.com/xslyr/inspackage/issues/3) ✅ | `_inspection.py:33` | Pacote de módulo único (ex.: `typing_extensions`, `six`) → `dirname(spec.origin)` = `site-packages` → varre o venv inteiro. | ✅ rodado |
 | B03 [#3](https://github.com/xslyr/inspackage/issues/3) ✅ | `_inspection.py:29` | Namespace packages (sem `__init__.py`) dão "not found" porque `spec.origin` é `None`; deveria usar `submodule_search_locations`. | ✅ rodado |
-| B04 [#4](https://github.com/xslyr/inspackage/issues/4) 🟡 | `tree.py:60` | `--dir arquivo.py` → `KeyError: 'nodes'`; mapa vazio (`{}`) → `KeyError: 'name'`. | ✅ rodado |
+| B04 [#4](https://github.com/xslyr/inspackage/issues/4) ✅ | `tree.py:60` | `--dir arquivo.py` → `KeyError: 'nodes'`; mapa vazio (`{}`) → `KeyError: 'name'`. | ✅ rodado |
 | B05 [#5](https://github.com/xslyr/inspackage/issues/5) ✅ | `_inspection.py:42-43` | `SyntaxError`/`UnicodeDecodeError` em um arquivo derruba a inspeção toda; `PermissionError` no `scandir` idem. | ✅ rodado (SyntaxError) |
 | B06 [#6](https://github.com/xslyr/inspackage/issues/6) ✅ | `_inspection.py:41` | `".py" in name` aceita `.pyc`, `.pyi`, `x.python.txt`. | leitura |
 | B07 [#6](https://github.com/xslyr/inspackage/issues/6) ✅ | `_inspection.py:41,49` | Ignora tudo que começa com `_` → some `__init__.py` (onde fica a API pública!), `__main__.py`, `_private/`. | leitura |
@@ -25,13 +25,13 @@ Milestones: [v0.2.0](https://github.com/xslyr/inspackage/milestone/1) · [v0.3.0
 | B11 [#7](https://github.com/xslyr/inspackage/issues/7) ✅ | `_inspection.py:100-101` | `params.replace("self", "")` corrompe nomes (`itself` → `it`, `cls_name` → `_name`). Remover o 1º argumento via AST. | leitura |
 | B12 [#9](https://github.com/xslyr/inspackage/issues/9) ✅ | `_inspection.py:95` vs `tree.py:175` | Grava em `"properties"` mas o renderizador procura `"property"` → propriedades nunca aparecem. | leitura |
 | B13 [#9](https://github.com/xslyr/inspackage/issues/9) ✅ | `tree.py:207` | `dark_theme` lê a variável `LIGHT_THEME`. | leitura |
-| B14 [#10](https://github.com/xslyr/inspackage/issues/10) | `cli.py:72` | `--save --dir .` relativo → arquivo `..json`; e `--save` só grava *depois* de fechar o TUI. | leitura |
-| B15 [#11](https://github.com/xslyr/inspackage/issues/11) | `_callbacks.py:9-18` | Help manual desatualizado: anuncia `-i/--interactive` (não existe) e omite `--static`, `--dir`, `--env`. `--verbose` não faz nada. | leitura |
+| B14 [#10](https://github.com/xslyr/inspackage/issues/10) ✅ | `cli.py:72` | `--save --dir .` relativo → arquivo `..json`; e `--save` só grava *depois* de fechar o TUI. | leitura |
+| B15 [#11](https://github.com/xslyr/inspackage/issues/11) ✅ | `_callbacks.py:9-18` | Help manual desatualizado: anuncia `-i/--interactive` (não existe) e omite `--static`, `--dir`, `--env`. `--verbose` não faz nada. | leitura |
 | B16 [#5](https://github.com/xslyr/inspackage/issues/5) ✅ | `_inspection.py:51` | `scandir` sem ordenação → saída não determinística; segue symlinks (risco de loop). | leitura |
 | B17 [#23](https://github.com/xslyr/inspackage/issues/23) | `pyproject.toml` | `rich` usado diretamente mas não declarado; classifiers só citam 3.13; versão duplicada em `__init__.py` (usar `importlib.metadata`). `.python-version`=3.10 não instalado no pyenv local. | leitura |
 | B18 [#12](https://github.com/xslyr/inspackage/issues/12) ✅ | `tests/` | Asserts dentro de `pytest.raises` nunca executam; teste vazio (`...`); testes dependem de pacotes do venv (`rich`, `dotenv`). | leitura |
 
-Legenda: ✅ corrigido na branch `milestone/v0.2.0` · 🟡 parcial (B04: falta mensagem para diretório sem módulos, #4).
+Legenda: ✅ corrigido na branch `milestone/v0.2.0`.
 
 ## 2. Fases
 
@@ -43,7 +43,7 @@ _Issue: #13 — milestone v0.2.0 — ✅ concluída_
 - Meta: cobertura ≥ 85% em `inspackage/`.
 
 ### Fase 1 — Núcleo de inspeção correto
-_Issue: #14 — milestone v0.2.0 — ✅ modelo pronto; faltam opções de CLI e JSON com schema_version (#15)_
+_Issue: #14 — milestone v0.2.0 — ✅ concluída (exposta pela CLI na #15)_
 - Novo modelo de dados tipado (`inspackage/model.py`, dataclasses): `PackageInfo`, `ModuleInfo`, `ClassInfo`, `FunctionInfo`, `VariableInfo` com `lineno`, `docstring` (1ª linha), `decorators`, `bases`, `is_async`, `kind` (method/classmethod/staticmethod/property), `imports`, `__all__`.
 - Resolver origem: nome → path (pacote, módulo único, namespace) e path → módulo; aceitar `.`.
 - Coletar erros por arquivo em `ModuleInfo.errors` em vez de abortar.
@@ -52,7 +52,7 @@ _Issue: #14 — milestone v0.2.0 — ✅ modelo pronto; faltam opções de CLI e
 - Corrige B02–B12, B16.
 
 ### Fase 2 — CLI
-_Issue: #15 — milestone v0.2.0_
+_Issue: #15 — milestone v0.2.0 — ✅ concluída (`--save` grava o JSON novo: quebra intencional, ver comentário na #15)_
 - Interface compatível: `inspackage [ALVO] [--dir PATH] --format {tui,tree,json,html,md,llm,graph} [-o ARQ]`.
 - `--static` → alias de `--format tree`; `--save` → alias de `--format json -o <nome>.json` (manter, com aviso de depreciação).
 - Usar help nativo do Typer (remover template manual) — corrige B15.
