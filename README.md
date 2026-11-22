@@ -74,14 +74,27 @@ inspackage . --format tree --verbose
 # All options
 inspackage --help
 ```
-Without `-o`, text formats go to stdout. `-o` cannot be combined with `--format tui`. More formats (html, llm, graph)
-are planned and currently answer with a "not available in this version" error.
+Without `-o`, text formats go to stdout. `-o` cannot be combined with `--format tui`. When `-o` is given without
+`--format`, the format is inferred from the extension (`.json` -> json, `.txt` -> tree); any other extension is an
+error (the default format is `tui`, which cannot be written to a file: pass `--format`). Files are written atomically
+(a failed run never leaves a partial file). Closing the pipe early (`inspackage X --format json | head -1`) is not an
+error. More formats (html, md, llm, graph) are planned and currently answer with a "not available in this version"
+error.
+
+### Customizing the TUI (`-e/--env`)
+`-e/--env FILE` loads an env file (default `~/.inspackagerc`, optional) that sets the Textual themes:
+```bash
+# ~/.inspackagerc
+LIGHT_THEME=textual-light
+DARK_THEME=flexoki
+```
+Any Textual theme name works. Values from the file override the current environment.
 
 ### Deprecated options (still working)
 | Old | Now | Notes |
 | --- | --- | --- |
 | `--static` | `--format tree` | prints a warning on stderr |
-| `--save` | `--format json -o <name>.json` | `<name>` is the resolved package/module name, written to the current directory; combined with `--static`/`--format tree`/`tui` it is written in addition to that output, before the TUI opens. Prints a warning on stderr |
+| `--save` | `--format json -o <name>.json` | `<name>` is the resolved package/module name (e.g. `xml.etree` -> `etree.json`), written to the current directory; combined with `--static`/`--format tree`/`tui` it is written in addition to that output, before the TUI opens. Alone, it no longer opens the TUI. Prints a warning on stderr |
 
 ### Exit codes
 | Code | Meaning |
@@ -97,7 +110,12 @@ Errors are short messages on stderr, without traceback (use `--verbose` to get i
 - Names starting with `_` are hidden by default; use `--include-private` to show them.
 - An installed package has priority over a local folder with the same name; use `./name` to force the folder.
 - Directory symlinks are not followed.
-- `--save` alone no longer opens the TUI; it only writes the JSON file (whose format is the new, versioned schema).
+- `--save` alone no longer opens the TUI; it only writes the JSON file. To keep the old behavior (save, then open the
+  TUI) use `--format tui --save`.
+- **The JSON written by `--save` / `--format json` changed format.** It is now the versioned schema
+  (`schema_version`, `type`, `modules`, `packages`, ... plus new keys); the old `name`/`category`/`nodes` format of
+  v0.1.x is no longer written. Tools reading old files must be updated.
+- The `--save` file name uses the resolved name (e.g. `xml.etree` -> `etree.json`, `.` -> the directory name), never `.`.
 
 
 <br>
