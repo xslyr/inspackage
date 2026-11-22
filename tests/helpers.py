@@ -1,5 +1,13 @@
 import os
+import re
 from pathlib import Path
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def strip_ansi(text: str) -> str:
+    """Remove ANSI color codes (Typer forces colors in --help when GITHUB_ACTIONS is set)."""
+    return _ANSI.sub("", text)
 
 
 def collect_strings(obj) -> list[str]:

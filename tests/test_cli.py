@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 import pytest
-from helpers import assert_snapshot, collect_strings
+from helpers import assert_snapshot, collect_strings, strip_ansi
 from typer.testing import CliRunner
 
 from inspackage import __version__
@@ -202,18 +202,18 @@ def test_save_with_static_prints_tree_and_writes_json(run_cli, samplepkg_ok, tmp
 
 
 def test_help_does_not_advertise_nonexistent_interactive_option(run_cli):
-    assert "--interactive" not in run_cli("--help").output
+    assert "--interactive" not in strip_ansi(run_cli("--help").output)
 
 
 @pytest.mark.parametrize("option", ["--static", "--dir", "--env", "--format", "--output", "--include-private"])
 def test_help_lists_real_options(run_cli, option):
-    assert option in run_cli("--help").output
+    assert option in strip_ansi(run_cli("--help").output)
 
 
 def test_short_help_flag_works(run_cli):
     result = run_cli("-h")
     assert result.exit_code == 0
-    assert "--format" in result.output
+    assert "--format" in strip_ansi(result.output)
 
 
 def test_verbose_reports_resolved_path_and_counts_on_stderr(run_cli, samplepkg_path):
