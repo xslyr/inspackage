@@ -113,7 +113,7 @@ def test_undecodable_file_does_not_abort_inspection(tmp_path):
 
 
 @pytest.mark.skipif(os.geteuid() == 0, reason="root ignores directory permissions")
-def test_unreadable_directory_is_skipped_silently(tmp_path):
+def test_unreadable_directory_error_is_recorded(tmp_path):
     pkg = tmp_path / "pkg"
     locked = pkg / "locked"
     locked.mkdir(parents=True)
@@ -124,6 +124,8 @@ def test_unreadable_directory_is_skipped_silently(tmp_path):
     finally:
         locked.chmod(0o755)
     assert tree_has(tree, "ok.py")
+    locked_node = next(node for node in tree["nodes"] if node["name"] == "locked")
+    assert locked_node["errors"] == ["PermissionError: Permission denied"]
 
 
 def test_children_are_sorted_deterministically(tmp_path):

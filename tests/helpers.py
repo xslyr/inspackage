@@ -32,9 +32,11 @@ def snapshot_path(name: str) -> Path:
 
 
 def assert_snapshot(name: str, actual: str) -> None:
-    """Compare text to tests/snapshots/<name>; rewrite it when UPDATE_SNAPSHOTS=1."""
+    """Compare text to tests/snapshots/<name>; (re)write it only when UPDATE_SNAPSHOTS=1."""
     path = snapshot_path(name)
-    if os.environ.get("UPDATE_SNAPSHOTS") == "1" or not path.exists():
+    if os.environ.get("UPDATE_SNAPSHOTS") == "1":
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(actual, encoding="utf-8")
+    elif not path.exists():
+        raise AssertionError(f"Snapshot {path.name} does not exist; run with UPDATE_SNAPSHOTS=1 to create it")
     assert path.read_text(encoding="utf-8") == actual

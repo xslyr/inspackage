@@ -104,6 +104,9 @@ def test_dir_pointing_to_non_python_file_does_not_crash_with_keyerror(run_cli, t
     target.write_text("hello")
     result = run_cli("--static", "--dir", str(target))
     assert not isinstance(result.exception, KeyError)
+    assert result.exit_code == 1
+    assert "is not a Python source file" in _flat(result.output)
+    assert "readme.txt" in _flat(result.output)
 
 
 def test_target_with_rich_markup_is_printed_literally(run_cli):

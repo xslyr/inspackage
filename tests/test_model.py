@@ -2,6 +2,7 @@ import ast
 import importlib.machinery
 import importlib.util
 import json
+import os
 import sys
 import textwrap
 from types import SimpleNamespace
@@ -89,13 +90,19 @@ def test_self_and_cls_are_removed_via_ast(core):
     assert _by_name(base.methods, "static_helper").params == "value"
 
 
-def test_async_flag_and_linenos(core):
+def _line_of(path, prefix: str) -> int:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    return next(number for number, line in enumerate(lines, start=1) if line.startswith(prefix))
+
+
+def test_async_flag_and_linenos(core, samplepkg_path):
     func = _by_name(core.functions, "top_level_async")
-    assert func.is_async and func.kind == "function" and func.lineno == 69
+    assert func.is_async and func.kind == "function"
+    assert func.lineno == _line_of(samplepkg_path / "core.py", "async def top_level_async(")
     base = _by_name(core.classes, "Base")
     assert _by_name(base.methods, "async_method").is_async
     assert not _by_name(base.methods, "public_method").is_async
-    assert base.lineno == 4
+    assert base.lineno == _line_of(samplepkg_path / "core.py", "class Base")
 
 
 def test_docstrings_bases_and_nested_classes(core):
@@ -312,6 +319,20 @@ def test_unexpected_error_while_collecting_is_recorded(tmp_path, monkeypatch):
     info = _module(_write(tmp_path / "m.py", "def f(x=1):\n    pass\n"))
     assert info.errors == ["RecursionError: maximum recursion depth exceeded"]
     assert info.functions == []
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root ignores file permissions")
+def test_unreadable_file_error_is_recorded(tmp_path):
+    pkg = tmp_path / "pkg"
+    locked = _write(pkg / "locked.py", "X = 1\n")
+    _write(pkg / "ok.py", "OK = 1\n")
+    locked.chmod(0o000)
+    try:
+        info = inspect_path(str(pkg))
+    finally:
+        locked.chmod(0o644)
+    assert _by_name(info.modules, "locked.py").errors == ["PermissionError: Permission denied"]
+    assert not _by_name(info.modules, "ok.py").errors
 
 
 # ---------- filesystem walk ----------
