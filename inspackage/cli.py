@@ -122,6 +122,7 @@ def main(  # pylint: disable=too-many-arguments,too-many-positional-arguments,to
         "--env",
         "-e",
         help="Optional env file to change rules & preferred styles.",
+        show_default="~/.inspackagerc",
         exists=False,
         dir_okay=False,
         readable=True,
