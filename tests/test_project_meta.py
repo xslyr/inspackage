@@ -1,5 +1,8 @@
+import importlib.metadata
 import re
 from pathlib import Path
+
+from inspackage import __version__
 
 ROOT = Path(__file__).parent.parent
 PYPROJECT = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
@@ -25,3 +28,9 @@ def test_version_is_not_hardcoded_in_package_init():
     project_version = re.search(r'^version = "([^"]+)"', PYPROJECT, re.MULTILINE).group(1)
     assert f'"{project_version}"' not in source
     assert "importlib.metadata" in source
+
+
+def test_version_comes_from_installed_metadata():
+    # __version__ é lido de importlib.metadata: precisa bater com o dist instalado e não cair no fallback.
+    assert __version__ == importlib.metadata.version("inspackage")
+    assert __version__ != "0.0.0+unknown"

@@ -24,6 +24,7 @@ def test_version_option_prints_version(run_cli):
     result = run_cli("--version")
     assert result.exit_code == 0
     assert __version__ in result.output
+    assert "0.0.0+unknown" not in result.output
 
 
 def test_help_option_exits_zero_and_describes_tool(run_cli):
