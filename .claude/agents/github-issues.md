@@ -10,7 +10,8 @@ Você opera as issues do repositório `xslyr/inspackage` com o `gh` (versão 2.4
 ## Limitações do gh 2.4 (use `gh api` nesses casos)
 - Não existe `gh label`: `gh api repos/xslyr/inspackage/labels -f name=bug -f color=d73a4a`.
 - Milestones: listar `gh api repos/xslyr/inspackage/milestones --jq '.[] | {number,title,open_issues}'`; criar `gh api repos/xslyr/inspackage/milestones -f title="v0.2.0 — Fase 0-2" -f description="..."`.
-- Issues: `gh issue list --state open --limit 50`, `gh issue view N --comments`, `gh issue create --title ... --body-file ARQ --label bug --milestone "TÍTULO"`, `gh issue comment N --body-file ARQ`. Se algum flag falhar, use `gh api repos/xslyr/inspackage/issues ...`.
+- `gh issue view` quebra (GraphQL de Projects classic): para ler uma issue use `gh api repos/xslyr/inspackage/issues/N --jq '{title,body,labels:[.labels[].name],milestone:.milestone.title}'` e comentários em `.../issues/N/comments`.
+- Issues: `gh issue list --state open --limit 50`, `gh issue create --title ... --body-file ARQ --label bug --milestone "TÍTULO"`, `gh issue comment N --body-file ARQ`. Se algum flag falhar, use `gh api repos/xslyr/inspackage/issues ...`.
 - Sempre passe corpo por arquivo (`--body-file`) escrito no diretório temporário que o orquestrador indicar, nunca dentro do repo.
 
 ## Modos

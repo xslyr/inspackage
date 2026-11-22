@@ -9,7 +9,7 @@ Argumento: um ID (`B07`), vários (`B07 B08`), uma fase (`fase 1`) ou `próximo`
 
 ## 1. Preparar
 - Leia `CLAUDE.md` e `docs/ROADMAP.md`; identifique os itens e o estado deles (`git log --oneline -20`, testes `xfail` existentes).
-- Localize a issue do GitHub de cada item (sufixo `#N` no roadmap). Se não houver, sugira `/issues sync` antes.
+- Localize a issue do GitHub de cada item (sufixo `#N` no roadmap; leia com `gh api repos/xslyr/inspackage/issues/N` — `gh issue view` quebra no gh 2.4). Se não houver, sugira `/issues sync` antes.
 - Nunca trabalhe na `main`: se ainda não estiver numa branch de trabalho, use `/issues start <N | milestone>` para criá-la.
 - Registre o plano no task list da sessão (um passo por item/agente).
 
