@@ -55,8 +55,11 @@ else
   skip "fixtures (tests/fixtures ausente — Fase 0)"
 fi
 
-# formatos aceitos = os listados na linha "--format" do help (ex.: tui, tree, json)
-FORMATS="$(grep -o 'tui[^.]*' <<<"$($CLI --help 2>&1 | tr '\n' ' ' | grep -o -- '--format .*' )" | head -1)"
+# formatos aceitos = registro FORMATS do pacote (fallback: linha "--format" do help)
+FORMATS="$("$ROOT/.venv/bin/python" -c "from inspackage.render import FORMATS; print(' '.join(FORMATS))" 2>/dev/null)" || FORMATS=""
+if [ -z "$FORMATS" ]; then
+  FORMATS="$(grep -o 'tui[^.]*' <<<"$($CLI --help 2>&1 | tr '\n' ' ' | grep -o -- '--format .*' )" | head -1)"
+fi
 for fmt in html llm graph json; do
   if ! has_flag "--format"; then
     skip "--format $fmt (flag ainda não existe)"

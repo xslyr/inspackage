@@ -1,12 +1,15 @@
 import json
 import os
+import subprocess
+import sys
 
 import pytest
-from helpers import collect_strings
+from helpers import assert_snapshot, collect_strings
 from typer.testing import CliRunner
 
 from inspackage import __version__
 from inspackage.cli import typer_app
+from inspackage.render import FORMATS, OutputFormat
 
 
 def _flat(text: str) -> str:
@@ -48,10 +51,9 @@ def test_unknown_package_name_reports_not_found(run_cli):
 
 
 def test_static_by_name_resolves_package_on_syspath(run_cli, on_syspath):
-    # samplepkg has a SyntaxError file (B05), so only resolution is checked: the error must come from parsing,
-    # never from "not found".
     result = run_cli("--static", "samplepkg")
-    assert "not found" not in result.output
+    assert result.exit_code == 0
+    assert "core.py" in result.stdout
 
 
 @pytest.mark.parametrize("spelling", ["{abs}", "{abs}/", "relative"])
@@ -218,7 +220,7 @@ def test_verbose_reports_resolved_path_and_counts_on_stderr(run_cli, samplepkg_p
     assert result.exit_code == 0
     assert "Resolved:" in result.stderr and "samplepkg" in result.stderr
     assert "errors: 1" in result.stderr
-    assert "broken.py" in result.stderr
+    assert str(samplepkg_path / "broken.py") in result.stderr  # absolute path, not relative to the parent dir
 
 
 def test_without_verbose_stderr_is_quiet(run_cli, samplepkg_path):
@@ -374,3 +376,166 @@ def test_cwd_is_not_modified_by_cli(run_cli, samplepkg_ok):
     before = os.getcwd()
     run_cli("--static", "--dir", str(samplepkg_ok))
     assert os.getcwd() == before
+
+
+# ---------- review fixes ----------
+
+
+def test_save_json_matches_snapshot(run_cli, samplepkg_ok, tmp_path, monkeypatch):
+    out = tmp_path / "cwd"
+    out.mkdir()
+    monkeypatch.chdir(out)
+    result = run_cli("--save", "--dir", str(samplepkg_ok))
+    assert result.exit_code == 0
+    assert_snapshot("save_samplepkg.json", (out / "samplepkg.json").read_text(encoding="utf-8"))
+
+
+def test_save_deprecation_warning_mentions_tui_and_the_old_behavior(run_cli, samplepkg_ok, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    result = run_cli("--save", "--dir", str(samplepkg_ok))
+    warning = _flat(result.stderr)
+    assert "no longer opens the TUI" in warning
+    assert "--format tui --save" in warning
+
+
+def test_save_of_dotted_name_uses_the_resolved_name(run_cli, tmp_path, monkeypatch, fixtures_dir):
+    monkeypatch.chdir(tmp_path)
+    result = run_cli("--save", "--dir", str(fixtures_dir / "samplepkg" / "sub"))
+    assert result.exit_code == 0
+    assert (tmp_path / "sub.json").exists()
+
+
+class _BrokenStdout:
+    def write(self, _text):
+        raise BrokenPipeError
+
+    def flush(self):
+        raise BrokenPipeError
+
+    def isatty(self):
+        return False
+
+    def fileno(self):  # Rich redirects this fd to devnull on a broken pipe: give it a harmless, private one
+        return self._fd
+
+    def __init__(self):
+        self._fd = os.open(os.devnull, os.O_WRONLY)
+
+    def close(self):
+        os.close(self._fd)
+
+
+@pytest.mark.parametrize("fmt", ["json", "tree"])
+def test_broken_pipe_on_real_renderers_is_a_silent_success(samplepkg_ok, monkeypatch, fmt):
+    from inspackage import cli
+    from inspackage._inspection import inspect_target
+
+    broken = _BrokenStdout()
+    monkeypatch.setattr(sys, "stdout", broken)
+    try:
+        cli._render_to_stdout(FORMATS[fmt], inspect_target(None, str(samplepkg_ok)))  # must not raise
+    finally:
+        broken.close()
+
+
+@pytest.mark.parametrize("exc", [BrokenPipeError(), SystemExit(1)])  # SystemExit(1): what Rich raises
+def test_broken_pipe_exits_zero_without_message(run_cli, samplepkg_ok, monkeypatch, exc):
+    def render(info, out):
+        raise exc
+
+    monkeypatch.setitem(FORMATS, "json", OutputFormat("json", render, "x"))
+    result = run_cli("--format", "json", "--dir", str(samplepkg_ok))
+    assert result.exit_code == 0
+    assert result.stderr == ""
+
+
+@pytest.mark.parametrize("fmt", ["json", "tree"])
+def test_piping_to_a_closed_reader_exits_zero_quietly(fmt):
+    cmd = [sys.executable, "-c", "from inspackage.cli import typer_app; typer_app()", "--format", fmt]
+    cmd += ["--dir", os.path.join(os.path.dirname(__file__), "..", "inspackage")]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)  # pylint: disable=consider-using-with
+    proc.stdout.close()
+    stderr = proc.stderr.read()
+    assert proc.wait() == 0
+    assert stderr == b""
+
+
+def test_invalid_format_without_target_is_a_usage_error(run_cli):
+    result = run_cli("--format", "yaml")
+    assert result.exit_code == 1
+    assert "Invalid format 'yaml'" in _flat(result.stderr)
+
+
+@pytest.mark.parametrize("args", [["--format", "json"], ["--static"], ["-o", "x.json"], ["--save"]])
+def test_format_options_without_target_report_missing_target(run_cli, args):
+    result = run_cli(*args)
+    assert result.exit_code == 1
+    assert "Missing target" in result.stderr
+    assert "Usage" not in result.stdout
+
+
+@pytest.mark.parametrize(
+    ("name", "check"),
+    [("out.json", lambda text: json.loads(text)["schema_version"] == 1), ("out.txt", lambda t: "core.py" in t)],
+)
+def test_output_extension_infers_the_format(run_cli, samplepkg_ok, tmp_path, name, check):
+    target = tmp_path / name
+    result = run_cli("-o", str(target), "--dir", str(samplepkg_ok))
+    assert result.exit_code == 0
+    assert check(target.read_text(encoding="utf-8"))
+
+
+def test_output_with_unknown_extension_asks_for_a_format(run_cli, samplepkg_ok, tmp_path):
+    target = tmp_path / "out.dat"
+    result = run_cli("-o", str(target), "--dir", str(samplepkg_ok))
+    assert result.exit_code == 1
+    assert "default format is tui" in _flat(result.stderr) and "--format" in result.stderr
+    assert not target.exists()
+
+
+def test_failed_render_leaves_no_partial_file_and_keeps_the_old_one(run_cli, samplepkg_ok, tmp_path, monkeypatch):
+    def render(info, out):
+        out.write("partial")
+        raise RuntimeError("kaboom")
+
+    monkeypatch.setitem(FORMATS, "json", OutputFormat("json", render, "x"))
+    target = tmp_path / "out.json"
+    target.write_text("old", encoding="utf-8")
+    fresh = tmp_path / "fresh.json"
+    for path in (target, fresh):
+        result = run_cli("--format", "json", "-o", str(path), "--dir", str(samplepkg_ok))
+        assert result.exit_code == 2 and "kaboom" in result.stderr
+    assert target.read_text(encoding="utf-8") == "old"
+    assert not fresh.exists()
+    assert sorted(p.name for p in tmp_path.iterdir() if p.name.startswith(".")) == []
+
+
+def test_successful_output_leaves_no_temporary_files(run_cli, samplepkg_ok, tmp_path):
+    outdir = tmp_path / "o"
+    outdir.mkdir()
+    run_cli("--format", "json", "-o", str(outdir / "x.json"), "--dir", str(samplepkg_ok))
+    assert [p.name for p in outdir.iterdir()] == ["x.json"]
+
+
+def test_error_messages_are_not_wrapped_in_the_middle_of_a_path(run_cli, tmp_path):
+    missing = tmp_path / ("very_long_directory_name_" * 6) / "missing"
+    result = run_cli("--format", "tree", "--dir", str(missing))
+    assert result.exit_code == 2
+    assert str(missing) in result.stderr
+
+
+def test_env_file_values_are_applied_to_the_tui(samplepkg_ok, tmp_path, monkeypatch):
+    monkeypatch.setenv("DARK_THEME", "before")  # restored (removed) by monkeypatch after load_dotenv overrides it
+    monkeypatch.delenv("LIGHT_THEME", raising=False)
+    rc = tmp_path / "custom.rc"
+    rc.write_text("DARK_THEME=x\n", encoding="utf-8")
+    seen = {}
+
+    def fake_run(self, *args, **kwargs):
+        seen["dark"] = self.dark_theme
+
+    monkeypatch.setattr("inspackage.render.InspackageApp.run", fake_run)
+    result = CliRunner().invoke(typer_app, ["-e", str(rc), "--dir", str(samplepkg_ok)])
+    assert result.exit_code == 0
+    assert os.environ["DARK_THEME"] == "x"
+    assert seen["dark"] == "x"

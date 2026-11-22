@@ -1,0 +1,372 @@
+{
+  "schema_version": 1,
+  "type": "package",
+  "name": "samplepkg",
+  "module": "samplepkg",
+  "path": "samplepkg",
+  "kind": "package",
+  "docstring": "Sample package used as fixture.",
+  "modules": [
+    {
+      "name": "__init__.py",
+      "module": "samplepkg",
+      "path": "samplepkg/__init__.py",
+      "docstring": "Sample package used as fixture.",
+      "all_exports": [
+        "Base",
+        "Child",
+        "top_level_async",
+        "helper"
+      ],
+      "imports": [
+        {
+          "module": "samplepkg.core",
+          "lineno": 3,
+          "names": [
+            "Base",
+            "Child",
+            "top_level_async"
+          ],
+          "level": 0
+        },
+        {
+          "module": "samplepkg.sub.util",
+          "lineno": 4,
+          "names": [
+            "helper"
+          ],
+          "level": 0
+        }
+      ],
+      "variables": [
+        {
+          "name": "__all__",
+          "lineno": 6,
+          "annotation": null
+        }
+      ],
+      "functions": [],
+      "classes": [],
+      "errors": []
+    },
+    {
+      "name": "__main__.py",
+      "module": "samplepkg.__main__",
+      "path": "samplepkg/__main__.py",
+      "docstring": "Entry point.",
+      "all_exports": null,
+      "imports": [],
+      "variables": [
+        {
+          "name": "ENTRY",
+          "lineno": 3,
+          "annotation": null
+        }
+      ],
+      "functions": [],
+      "classes": [],
+      "errors": []
+    },
+    {
+      "name": "constants.py",
+      "module": "samplepkg.constants",
+      "path": "samplepkg/constants.py",
+      "docstring": "Constants module.",
+      "all_exports": null,
+      "imports": [],
+      "variables": [
+        {
+          "name": "PUBLIC",
+          "lineno": 3,
+          "annotation": null
+        },
+        {
+          "name": "TYPED",
+          "lineno": 4,
+          "annotation": "int"
+        },
+        {
+          "name": "FIRST",
+          "lineno": 5,
+          "annotation": null
+        },
+        {
+          "name": "SECOND",
+          "lineno": 5,
+          "annotation": null
+        },
+        {
+          "name": "A",
+          "lineno": 6,
+          "annotation": null
+        },
+        {
+          "name": "B",
+          "lineno": 6,
+          "annotation": null
+        }
+      ],
+      "functions": [],
+      "classes": [],
+      "errors": []
+    },
+    {
+      "name": "core.py",
+      "module": "samplepkg.core",
+      "path": "samplepkg/core.py",
+      "docstring": "Core module.",
+      "all_exports": null,
+      "imports": [],
+      "variables": [],
+      "functions": [
+        {
+          "name": "top_level",
+          "lineno": 65,
+          "kind": "function",
+          "params": "a, b: int=2",
+          "returns": "int",
+          "is_async": false,
+          "decorators": [],
+          "docstring": null
+        },
+        {
+          "name": "top_level_async",
+          "lineno": 69,
+          "kind": "function",
+          "params": "x",
+          "returns": null,
+          "is_async": true,
+          "decorators": [],
+          "docstring": null
+        }
+      ],
+      "classes": [
+        {
+          "name": "Base",
+          "lineno": 4,
+          "docstring": "Base class.",
+          "decorators": [],
+          "bases": [],
+          "variables": [
+            {
+              "name": "class_var",
+              "lineno": 7,
+              "annotation": null
+            },
+            {
+              "name": "typed_var",
+              "lineno": 8,
+              "annotation": "int"
+            }
+          ],
+          "methods": [
+            {
+              "name": "__init__",
+              "lineno": 11,
+              "kind": "method",
+              "params": "name",
+              "returns": null,
+              "is_async": false,
+              "decorators": [],
+              "docstring": null
+            },
+            {
+              "name": "prop_value",
+              "lineno": 15,
+              "kind": "property",
+              "params": "",
+              "returns": null,
+              "is_async": false,
+              "decorators": [
+                "property"
+              ],
+              "docstring": null
+            },
+            {
+              "name": "from_name",
+              "lineno": 19,
+              "kind": "classmethod",
+              "params": "cls_name",
+              "returns": null,
+              "is_async": false,
+              "decorators": [
+                "classmethod"
+              ],
+              "docstring": null
+            },
+            {
+              "name": "static_helper",
+              "lineno": 23,
+              "kind": "staticmethod",
+              "params": "value",
+              "returns": null,
+              "is_async": false,
+              "decorators": [
+                "staticmethod"
+              ],
+              "docstring": null
+            },
+            {
+              "name": "public_method",
+              "lineno": 26,
+              "kind": "method",
+              "params": "itself, other: int=1",
+              "returns": "str",
+              "is_async": false,
+              "decorators": [],
+              "docstring": null
+            },
+            {
+              "name": "calls_super_marker",
+              "lineno": 29,
+              "kind": "method",
+              "params": "",
+              "returns": null,
+              "is_async": false,
+              "decorators": [],
+              "docstring": null
+            },
+            {
+              "name": "async_method",
+              "lineno": 35,
+              "kind": "method",
+              "params": "value",
+              "returns": null,
+              "is_async": true,
+              "decorators": [],
+              "docstring": null
+            }
+          ],
+          "classes": [
+            {
+              "name": "Inner",
+              "lineno": 38,
+              "docstring": "Nested class.",
+              "decorators": [],
+              "bases": [],
+              "variables": [
+                {
+                  "name": "inner_var",
+                  "lineno": 41,
+                  "annotation": null
+                }
+              ],
+              "methods": [
+                {
+                  "name": "inner_method",
+                  "lineno": 43,
+                  "kind": "method",
+                  "params": "",
+                  "returns": null,
+                  "is_async": false,
+                  "decorators": [],
+                  "docstring": null
+                }
+              ],
+              "classes": []
+            }
+          ]
+        },
+        {
+          "name": "Child",
+          "lineno": 47,
+          "docstring": null,
+          "decorators": [],
+          "bases": [
+            "Base"
+          ],
+          "variables": [],
+          "methods": [
+            {
+              "name": "__init__",
+              "lineno": 48,
+              "kind": "method",
+              "params": "name",
+              "returns": null,
+              "is_async": false,
+              "decorators": [],
+              "docstring": null
+            },
+            {
+              "name": "reset",
+              "lineno": 51,
+              "kind": "method",
+              "params": "",
+              "returns": null,
+              "is_async": false,
+              "decorators": [],
+              "docstring": null
+            },
+            {
+              "name": "uses_inner_def",
+              "lineno": 54,
+              "kind": "method",
+              "params": "",
+              "returns": null,
+              "is_async": false,
+              "decorators": [],
+              "docstring": null
+            }
+          ],
+          "classes": []
+        }
+      ],
+      "errors": []
+    }
+  ],
+  "packages": [
+    {
+      "name": "sub",
+      "module": "samplepkg.sub",
+      "path": "samplepkg/sub",
+      "kind": "package",
+      "docstring": "Subpackage.",
+      "modules": [
+        {
+          "name": "__init__.py",
+          "module": "samplepkg.sub",
+          "path": "samplepkg/sub/__init__.py",
+          "docstring": "Subpackage.",
+          "all_exports": null,
+          "imports": [],
+          "variables": [
+            {
+              "name": "SUB_EXPORT",
+              "lineno": 2,
+              "annotation": null
+            }
+          ],
+          "functions": [],
+          "classes": [],
+          "errors": []
+        },
+        {
+          "name": "util.py",
+          "module": "samplepkg.sub.util",
+          "path": "samplepkg/sub/util.py",
+          "docstring": null,
+          "all_exports": null,
+          "imports": [],
+          "variables": [],
+          "functions": [
+            {
+              "name": "helper",
+              "lineno": 1,
+              "kind": "function",
+              "params": "",
+              "returns": null,
+              "is_async": false,
+              "decorators": [],
+              "docstring": null
+            }
+          ],
+          "classes": [],
+          "errors": []
+        }
+      ],
+      "packages": [],
+      "errors": []
+    }
+  ],
+  "errors": []
+}
