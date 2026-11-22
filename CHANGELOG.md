@@ -39,6 +39,7 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ### Changed
 - Metadados de licença no formato PEP 639 (`license = "MIT"` + `license-files`), sem o classifier depreciado; CI e publicação usam Poetry 2.4.1, a mesma versão que gera o `poetry.lock` (#24).
+- Dependências atualizadas por alertas de segurança: `python-dotenv` 1.2.4 (mínimo agora `>=1.2.2`), `Pygments` 2.21.0, e no ambiente de desenvolvimento `pylint` 4.1.4 e `pytest` 9.2.0.
 - **Quebra de compatibilidade: o JSON gravado por `--save` e por `--format json` mudou de formato.** Agora é o schema
   versionado (`schema_version`, `type`, `modules`, `packages` e demais campos novos). O formato da v0.1.x (`name`,
   `category`, `nodes`) não é mais gravado. Migração: ferramentas que liam o JSON antigo devem ser atualizadas para o
