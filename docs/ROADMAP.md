@@ -75,7 +75,7 @@ _Issues: #19 (llm), #20 (graph), #21 (graphify), #22 (MCP) — milestone v0.4.0_
 - Distribuir uma skill (`inspect-python-package`) que ensina agentes a usar a CLI.
 
 ### Fase 5 — Release
-_Issues: #23 (versão/deps), #24 (CI), #25 (Trusted Publishing), #26 (CHANGELOG) — milestone v0.2.0 — ✅ concluída (falta só o bump 0.2.0 + tag, via /release)_
+_Issues: #23 (versão/deps), #24 (CI), #25 (Trusted Publishing), #26 (CHANGELOG) — milestone v0.2.0 — ✅ concluída (versão 0.2.0 preparada; falta a tag após o merge)_
 - Versão única via `importlib.metadata.version("inspackage")`.
 - CI: matriz Python 3.10–3.13; `ruff format --check` (CI não deve reformatar); `pytest --cov --cov-fail-under=85`.
 - `CHANGELOG.md`, classifiers corretos, `rich` como dependência explícita, `py.typed`.

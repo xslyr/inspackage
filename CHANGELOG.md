@@ -16,6 +16,8 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-22
+
 ### Added
 - Modelo de dados tipado (`inspackage/model.py`: `PackageInfo`, `ModuleInfo`, `ClassInfo`, `FunctionInfo`,
   `VariableInfo`, `ImportInfo`), com `lineno`, docstring (primeira linha), decorators, bases, `is_async`, `kind`
@@ -105,5 +107,6 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 Linha de base: versão publicada no PyPI antes deste changelog. Contém a TUI (Textual) de árvore de pacotes e as opções
 `--static`, `--save`, `--dir`, `-v/--verbose` e `-e/--env`.
 
-[Unreleased]: https://github.com/xslyr/inspackage/compare/90d42e6...HEAD
+[Unreleased]: https://github.com/xslyr/inspackage/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/xslyr/inspackage/compare/90d42e6...v0.2.0
 [0.1.1]: https://pypi.org/project/inspackage/0.1.1/
