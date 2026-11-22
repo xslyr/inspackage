@@ -142,10 +142,10 @@ def iter_modules(info: InspectionResult) -> Iterator[ModuleInfo]:
 
 
 def iter_errors(info: InspectionResult) -> Iterator[tuple[str, str]]:
-    """``(path, message)`` for every read/parse failure recorded anywhere under ``info``."""
+    """``(path, message)`` for every read/parse failure under ``info``; ``path`` is absolute when known."""
 
     for message in info.errors:
-        yield info.path, message
+        yield info.abspath or info.path, message
     if isinstance(info, PackageInfo):
         for module in info.modules:
             yield from iter_errors(module)

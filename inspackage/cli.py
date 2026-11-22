@@ -1,4 +1,7 @@
+import contextlib
+import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import List, NoReturn, Optional
 
@@ -59,15 +62,73 @@ def _choose_format(name: Optional[str], static: bool) -> OutputFormat | None:
     _fail(f"Invalid format '{name}'. Choose one of: {', '.join(FORMATS)}.", EXIT_USAGE)
 
 
+def _format_from_extension(output: Path) -> OutputFormat:
+    """``-o`` without ``--format``: ``.json`` -> json, ``.txt`` -> tree; anything else needs an explicit format."""
+
+    name = {".json": "json", ".txt": "tree"}.get(output.suffix.lower())
+    if name is None:
+        _fail(
+            f"Cannot infer the format from '{output}': the default format is tui, which cannot be written to a file. "
+            "Use --format tree or --format json (or an -o name ending in .json or .txt).",
+            EXIT_USAGE,
+        )
+    return FORMATS[name]
+
+
+def _silence_stdout() -> None:
+    """After a broken pipe (``| head``) point fd 1 at devnull so the interpreter's final flush stays quiet."""
+
+    with contextlib.suppress(OSError, ValueError, AttributeError):
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
+
+
+def _render_to_stdout(fmt: OutputFormat, info: InspectionResult) -> None:
+    """Render to stdout; a closed reader (``| head -1``) is a normal end, not an error."""
+
+    try:
+        fmt.render(info, sys.stdout)
+        sys.stdout.flush()
+    except BrokenPipeError:
+        _silence_stdout()
+    except SystemExit as err:  # Rich turns BrokenPipeError into SystemExit(1) after redirecting stdout itself
+        if err.code not in (1, None):
+            raise
+        _silence_stdout()
+
+
+def _render_to_file(fmt: OutputFormat, info: InspectionResult, output: Path) -> None:
+    """Render into a temporary file next to ``output`` and ``os.replace`` it: never leaves a partial file."""
+
+    mode = None
+    try:
+        mode = output.stat().st_mode & 0o777
+    except OSError:
+        pass
+    if mode is None:
+        umask = os.umask(0)
+        os.umask(umask)
+        mode = 0o666 & ~umask
+    handle_fd, tmp_name = tempfile.mkstemp(dir=output.resolve().parent, prefix=f".{output.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(handle_fd, "w", encoding="utf-8") as handle:
+            fmt.render(info, handle)
+        os.chmod(tmp_name, mode)
+        os.replace(tmp_name, output)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp_name)
+        raise
+
+
 def _write(fmt: OutputFormat, info: InspectionResult, output: Optional[Path]) -> None:
-    """Render ``info`` to ``output`` (a file) or to stdout."""
+    """Render ``info`` to ``output`` (a file, atomically) or to stdout."""
 
     if output is None:
-        fmt.render(info, sys.stdout)
+        _render_to_stdout(fmt, info)
         return
     try:
-        with open(output, "w", encoding="utf-8") as handle:
-            fmt.render(info, handle)
+        _render_to_file(fmt, info, output)
     except OSError as err:
         _fail(f"Could not write '{output}': {err.strerror or err}", EXIT_USAGE)
 
@@ -101,6 +162,7 @@ def _resolve(target: Optional[str], path: Optional[Path], options: dict, verbose
 
 @typer_app.command(cls=_Command)
 def main(  # pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals
+    ctx: Context,
     target: Optional[str] = Argument(None, metavar="[TARGET]", help="Package name, or path (e.g. '.' or './pkg')."),
     package_path: Optional[Path] = Option(None, "--dir", "-d", help="Package directory or .py file to inspect."),
     format_name: Optional[str] = Option(
@@ -130,7 +192,6 @@ def main(  # pylint: disable=too-many-arguments,too-many-positional-arguments,to
     version: Optional[bool] = Option(
         None, "--version", callback=callback_version, is_eager=True, help="Show the version and exit."
     ),
-    ctx: Context = typer.Context,  # type: ignore[assignment]
 ):
     """Inspackage inspects the structure of a Python package, directory or module (never imports it).
 
@@ -140,20 +201,29 @@ def main(  # pylint: disable=too-many-arguments,too-many-positional-arguments,to
     """
 
     del version
-    if not target and package_path is None:
-        typer.echo(ctx.get_help())
-        raise Exit()
     if target and package_path is not None:
         err_console.print(DefaultExceptions.package_and_path_send)
         raise Exit(code=EXIT_USAGE)
 
+    fmt = _choose_format(format_name, static)
+    if fmt is None and save:
+        fmt = FORMATS["json"]  # --save alone means "--format json -o <name>.json"
+    if fmt is None and output is not None:
+        fmt = _format_from_extension(output)
+    if not target and package_path is None:
+        if fmt is None and output is None and not save:
+            typer.echo(ctx.get_help())
+            raise Exit()
+        _fail("Missing target: give a package name, a path or --dir (see --help).", EXIT_USAGE)
+
     load_dotenv(env.as_posix(), override=True)
 
-    fmt = _choose_format(format_name, static)
     if save:
-        _warn("--save is deprecated; use --format json -o <name>.json.")
-    if fmt is None:
-        fmt = FORMATS["json"] if save else FORMATS["tui"]  # --save alone means "--format json -o <name>.json"
+        _warn(
+            "--save is deprecated and no longer opens the TUI; use --format json -o <name>.json "
+            "(--format tui --save keeps the old behavior: writes the JSON, then opens the TUI)."
+        )
+    fmt = fmt or FORMATS["tui"]
     if output is not None and fmt.interactive:
         _fail("--output cannot be used with --format tui; choose --format tree or json.", EXIT_USAGE)
 

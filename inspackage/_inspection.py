@@ -57,7 +57,10 @@ def get_tree_map(
     exclude: Iterable[str] = (),
     max_depth: int | None = None,
 ) -> dict:
-    """Legacy dict consumed by ``TreeBuilder``: prints a friendly error and exits with code 1 if not found."""
+    """Legacy: kept for API compatibility, the CLI does not use it.
+
+    Dict consumed by ``TreeBuilder``; prints a friendly error and exits with code 1 if not found.
+    """
 
     try:
         info = inspect_target(
@@ -70,7 +73,10 @@ def get_tree_map(
 
 
 def find_package_path(package_name: str) -> str:
-    """Path of the package directory (or module file) for ``package_name``; prints and exits with 1 if missing."""
+    """Legacy: kept for API compatibility, the CLI does not use it.
+
+    Path of the package directory (or module file) for ``package_name``; prints and exits with 1 if missing.
+    """
 
     try:
         paths, _ = _resolve(package_name, None)

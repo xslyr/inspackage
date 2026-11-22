@@ -4,7 +4,7 @@ from typer import Exit
 from inspackage import __version__
 
 console = Console()
-err_console = Console(stderr=True)
+err_console = Console(stderr=True, soft_wrap=True)
 
 
 def callback_version(value: bool):
