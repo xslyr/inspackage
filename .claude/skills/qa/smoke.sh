@@ -55,11 +55,15 @@ else
   skip "fixtures (tests/fixtures ausente — Fase 0)"
 fi
 
+# formatos aceitos = os listados na linha "--format" do help (ex.: tui, tree, json)
+FORMATS="$(grep -o 'tui[^.]*' <<<"$($CLI --help 2>&1 | tr '\n' ' ' | grep -o -- '--format .*' )" | head -1)"
 for fmt in html llm graph json; do
-  if has_flag "--format"; then
-    run "--format $fmt" $CLI --dir "$ROOT/inspackage" --format "$fmt" -o "$WORK/out.$fmt"
-  else
+  if ! has_flag "--format"; then
     skip "--format $fmt (flag ainda não existe)"
+  elif ! grep -qw -- "$fmt" <<<"$FORMATS"; then
+    expect_error "--format $fmt (ainda indisponível: erro de uso amigável)" $CLI --dir "$ROOT/inspackage" --format "$fmt" -o "$WORK/out.$fmt"
+  else
+    run "--format $fmt" $CLI --dir "$ROOT/inspackage" --format "$fmt" -o "$WORK/out.$fmt"
   fi
 done
 

@@ -68,7 +68,7 @@ def test_static_output_hides_private_variables_and_splits_tuples(static_output):
 def test_static_snapshot_of_subpackage(run_cli, samplepkg_path):
     result = run_cli("--static", "--dir", str(samplepkg_path / "sub"))
     assert result.exit_code == 0
-    assert_snapshot("static_sub.txt", result.output)
+    assert_snapshot("static_sub.txt", result.stdout)
 
 
 def test_json_snapshot_of_single_module(fixtures_dir):

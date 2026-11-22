@@ -43,7 +43,7 @@ def test_name_and_dir_together_is_a_usage_error(run_cli, samplepkg_ok):
 
 def test_unknown_package_name_reports_not_found(run_cli):
     result = run_cli("--static", "xyz_package_that_does_not_exist")
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "not found" in result.output
 
 
@@ -104,28 +104,28 @@ def test_dir_pointing_to_non_python_file_does_not_crash_with_keyerror(run_cli, t
     target.write_text("hello")
     result = run_cli("--static", "--dir", str(target))
     assert not isinstance(result.exception, KeyError)
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "is not a Python source file" in _flat(result.output)
     assert "readme.txt" in _flat(result.output)
 
 
 def test_target_with_rich_markup_is_printed_literally(run_cli):
     result = run_cli("--static", "/nonexist[/]")
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "Path '/nonexist[/]' not found!" in _flat(result.output)
     assert "MarkupError" not in repr(result.exception)
 
 
 def test_dir_with_rich_markup_is_printed_literally(run_cli, tmp_path):
     result = run_cli("--static", "--dir", str(tmp_path / "[bold]missing"))
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "[bold]missing' not found!" in _flat(result.output)
 
 
 def test_distribution_name_suggests_import_name(run_cli, tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     result = run_cli("--static", "typing-extensions-xyz")
-    assert result.exit_code == 1
+    assert result.exit_code == 2
     assert "Path" not in _flat(result.output)
     assert "Package 'typing-extensions-xyz' not found" in _flat(result.output)
     assert "Did you mean 'typing_extensions_xyz'?" in _flat(result.output)
@@ -140,17 +140,28 @@ def test_cli_survives_a_file_with_syntax_error(run_cli, samplepkg_path):
 # ---------- B14: --save ----------
 
 
-@pytest.mark.xfail(strict=True, reason="B14 #10")
 def test_save_with_dot_does_not_create_double_dot_json(run_cli, samplepkg_ok, monkeypatch):
     monkeypatch.chdir(samplepkg_ok)
     result = run_cli("--save", "--static", "--dir", ".")
     assert result.exit_code == 0
     assert not (samplepkg_ok / "..json").exists()
-    assert (samplepkg_ok / "samplepkg.json").exists()
+    assert json.loads((samplepkg_ok / "samplepkg.json").read_text(encoding="utf-8"))["schema_version"] == 1
 
 
-@pytest.mark.xfail(strict=True, reason="B14 #10")
-def test_save_happens_before_the_interactive_app_runs(run_cli, samplepkg_ok, tmp_path, monkeypatch):
+def test_save_alone_writes_json_without_opening_the_tui(run_cli, samplepkg_ok, tmp_path, monkeypatch):
+    out = tmp_path / "cwd"
+    out.mkdir()
+    monkeypatch.chdir(out)
+    called = []
+    monkeypatch.setattr("inspackage.render.InspackageApp.run", lambda self, *a, **k: called.append(1))
+    result = run_cli("--save", "--dir", str(samplepkg_ok))
+    assert result.exit_code == 0
+    assert not called
+    assert json.loads((out / "samplepkg.json").read_text(encoding="utf-8"))["name"] == "samplepkg"
+    assert "deprecated" in result.stderr
+
+
+def test_save_with_tui_happens_before_the_interactive_app_runs(run_cli, samplepkg_ok, tmp_path, monkeypatch):
     out = tmp_path / "cwd"
     out.mkdir()
     monkeypatch.chdir(out)
@@ -159,24 +170,197 @@ def test_save_happens_before_the_interactive_app_runs(run_cli, samplepkg_ok, tmp
     def fake_run(self, *args, **kwargs):
         seen["saved_before_run"] = (out / "samplepkg.json").exists()
 
-    monkeypatch.setattr("inspackage.cli.InspackageApp.run", fake_run)
-    result = run_cli("--save", "--dir", str(samplepkg_ok))
+    monkeypatch.setattr("inspackage.render.InspackageApp.run", fake_run)
+    result = run_cli("--save", "--format", "tui", "--dir", str(samplepkg_ok))
     assert result.exit_code == 0
     assert seen["saved_before_run"]
+
+
+def test_save_name_comes_from_resolved_module_not_from_the_argument(run_cli, samplepkg_ok, tmp_path, monkeypatch):
+    out = tmp_path / "cwd"
+    out.mkdir()
+    monkeypatch.chdir(out)
+    result = run_cli("--save", "--dir", str(samplepkg_ok / "core.py"))
+    assert result.exit_code == 0
+    assert (out / "core.json").exists()
+
+
+def test_save_with_static_prints_tree_and_writes_json(run_cli, samplepkg_ok, tmp_path, monkeypatch):
+    out = tmp_path / "cwd"
+    out.mkdir()
+    monkeypatch.chdir(out)
+    result = run_cli("--static", "--save", "--dir", str(samplepkg_ok))
+    assert result.exit_code == 0
+    assert "core.py" in result.stdout
+    assert (out / "samplepkg.json").exists()
 
 
 # ---------- B15: help ----------
 
 
-@pytest.mark.xfail(strict=True, reason="B15 #11")
 def test_help_does_not_advertise_nonexistent_interactive_option(run_cli):
     assert "--interactive" not in run_cli("--help").output
 
 
-@pytest.mark.xfail(strict=True, reason="B15 #11")
-@pytest.mark.parametrize("option", ["--static", "--dir", "--env"])
+@pytest.mark.parametrize("option", ["--static", "--dir", "--env", "--format", "--output", "--include-private"])
 def test_help_lists_real_options(run_cli, option):
     assert option in run_cli("--help").output
+
+
+def test_short_help_flag_works(run_cli):
+    result = run_cli("-h")
+    assert result.exit_code == 0
+    assert "--format" in result.output
+
+
+def test_verbose_reports_resolved_path_and_counts_on_stderr(run_cli, samplepkg_path):
+    result = run_cli("--format", "tree", "--verbose", "--dir", str(samplepkg_path))
+    assert result.exit_code == 0
+    assert "Resolved:" in result.stderr and "samplepkg" in result.stderr
+    assert "errors: 1" in result.stderr
+    assert "broken.py" in result.stderr
+
+
+def test_without_verbose_stderr_is_quiet(run_cli, samplepkg_path):
+    result = run_cli("--format", "tree", "--dir", str(samplepkg_path))
+    assert result.stderr == ""
+
+
+def test_unexpected_error_hides_traceback_unless_verbose(run_cli, samplepkg_ok, monkeypatch):
+    def boom(*args, **kwargs):
+        raise RuntimeError("kaboom")
+
+    monkeypatch.setattr("inspackage.cli.inspect_target", boom)
+    quiet = run_cli("--format", "tree", "--dir", str(samplepkg_ok))
+    assert quiet.exit_code == 2
+    assert "kaboom" in quiet.stderr and "Traceback" not in quiet.stderr
+    loud = run_cli("--format", "tree", "--verbose", "--dir", str(samplepkg_ok))
+    assert loud.exit_code == 2
+    assert "Traceback" in loud.stderr
+
+
+# ---------- F2: --format / -o / filters / exit codes ----------
+
+
+def test_format_json_goes_to_stdout_uncolored_with_schema_version(run_cli, samplepkg_ok):
+    result = run_cli("--format", "json", "--dir", str(samplepkg_ok))
+    assert result.exit_code == 0
+    data = json.loads(result.stdout)
+    assert data["schema_version"] == 1 and data["type"] == "package" and data["name"] == "samplepkg"
+    assert "\x1b" not in result.stdout
+    assert result.stderr == ""
+
+
+def test_format_json_with_output_writes_file(run_cli, samplepkg_ok, tmp_path):
+    target = tmp_path / "out.json"
+    result = run_cli("--format", "json", "-o", str(target), "--dir", str(samplepkg_ok))
+    assert result.exit_code == 0
+    assert result.stdout == ""
+    assert json.loads(target.read_text(encoding="utf-8"))["schema_version"] == 1
+
+
+def test_format_tree_with_output_writes_plain_text(run_cli, samplepkg_ok, tmp_path):
+    target = tmp_path / "tree.txt"
+    result = run_cli("--format", "tree", "--output", str(target), "--dir", str(samplepkg_ok))
+    assert result.exit_code == 0
+    text = target.read_text(encoding="utf-8")
+    assert "core.py" in text and "\x1b" not in text
+    assert text.splitlines()[0] == "samplepkg"
+
+
+def test_static_is_alias_of_format_tree_with_deprecation_warning(run_cli, samplepkg_ok):
+    legacy = run_cli("--static", "--dir", str(samplepkg_ok))
+    new = run_cli("--format", "tree", "--dir", str(samplepkg_ok))
+    assert legacy.stdout == new.stdout
+    assert "--static is deprecated" in legacy.stderr
+    assert new.stderr == ""
+
+
+def test_static_with_other_format_is_a_usage_error(run_cli, samplepkg_ok):
+    result = run_cli("--static", "--format", "json", "--dir", str(samplepkg_ok))
+    assert result.exit_code == 1
+
+
+def test_output_with_tui_is_a_usage_error(run_cli, samplepkg_ok, tmp_path):
+    result = run_cli("--format", "tui", "-o", str(tmp_path / "x"), "--dir", str(samplepkg_ok))
+    assert result.exit_code == 1
+    assert "--output" in result.stderr
+    result = run_cli("-o", str(tmp_path / "x"), "--dir", str(samplepkg_ok))  # default format is tui
+    assert result.exit_code == 1
+
+
+def test_invalid_format_is_a_usage_error_without_traceback(run_cli, samplepkg_ok):
+    result = run_cli("--format", "yaml", "--dir", str(samplepkg_ok))
+    assert result.exit_code == 1
+    assert "Invalid format 'yaml'" in _flat(result.stderr)
+    assert "Traceback" not in result.output
+
+
+@pytest.mark.parametrize("fmt", ["html", "md", "llm", "graph"])
+def test_planned_formats_report_not_available(run_cli, samplepkg_ok, fmt):
+    result = run_cli("--format", fmt, "--dir", str(samplepkg_ok))
+    assert result.exit_code == 1
+    assert "not available in this version" in _flat(result.stderr)
+
+
+def test_click_usage_errors_exit_with_1(run_cli):
+    assert run_cli("--no-such-option").exit_code == 1
+    assert run_cli("--max-depth", "abc", ".").exit_code == 1
+
+
+def test_unwritable_output_is_a_friendly_error(run_cli, samplepkg_ok, tmp_path):
+    result = run_cli("--format", "json", "-o", str(tmp_path / "missing" / "x.json"), "--dir", str(samplepkg_ok))
+    assert result.exit_code == 1
+    assert "Could not write" in result.stderr and "Traceback" not in result.output
+
+
+def test_include_private_option(run_cli, samplepkg_ok):
+    hidden = run_cli("--format", "tree", "--dir", str(samplepkg_ok)).stdout
+    shown = run_cli("--format", "tree", "--include-private", "--dir", str(samplepkg_ok)).stdout
+    assert "_private_func" not in hidden
+    assert "_private_func" in shown
+
+
+def test_exclude_option_is_repeatable(run_cli, samplepkg_ok):
+    result = run_cli("--format", "tree", "--exclude", "core.py", "--exclude", "sub", "--dir", str(samplepkg_ok))
+    assert result.exit_code == 0
+    assert "core.py" not in result.stdout and "util.py" not in result.stdout
+    assert "constants.py" in result.stdout
+
+
+def test_max_depth_option(run_cli, samplepkg_ok):
+    result = run_cli("--format", "tree", "--max-depth", "0", "--dir", str(samplepkg_ok))
+    assert result.exit_code == 0
+    assert "util.py" not in result.stdout and "core.py" in result.stdout
+
+
+def test_success_exit_code_is_zero_and_target_errors_are_two(run_cli, samplepkg_ok):
+    assert run_cli("--format", "tree", "--dir", str(samplepkg_ok)).exit_code == 0
+    assert run_cli("--format", "tree", "--dir", str(samplepkg_ok / "nope")).exit_code == 2
+
+
+# ---------- B04: directory without modules ----------
+
+
+def test_directory_without_python_modules_is_a_friendly_error(run_cli, tmp_path):
+    empty = tmp_path / "vazio"
+    empty.mkdir()
+    (empty / "notes.txt").write_text("x")
+    result = run_cli("--format", "tree", "--dir", str(empty))
+    assert result.exit_code == 2
+    assert "No Python modules found in" in _flat(result.stderr)
+    assert "vazio" in _flat(result.stderr)
+    assert result.stdout == ""
+    assert not isinstance(result.exception, KeyError)
+
+
+def test_directory_without_modules_does_not_write_output_file(run_cli, tmp_path):
+    empty = tmp_path / "vazio"
+    empty.mkdir()
+    target = tmp_path / "out.json"
+    result = run_cli("--format", "json", "-o", str(target), "--dir", str(empty))
+    assert result.exit_code == 2
+    assert not target.exists()
 
 
 def test_missing_env_file_is_accepted(samplepkg_ok, tmp_path):

@@ -11,6 +11,7 @@ increment :data:`SCHEMA_VERSION`.
 
 # pylint: disable=too-many-instance-attributes
 
+from collections.abc import Iterator
 from dataclasses import dataclass, field, fields, is_dataclass
 from typing import Any
 
@@ -128,6 +129,30 @@ class PackageInfo(_Root):
 
 InspectionResult = PackageInfo | ModuleInfo
 
+
+def iter_modules(info: InspectionResult) -> Iterator[ModuleInfo]:
+    """Every module (``.py`` file) under ``info`` (``info`` itself when it is a module)."""
+
+    if isinstance(info, ModuleInfo):
+        yield info
+        return
+    yield from info.modules
+    for sub in info.packages:
+        yield from iter_modules(sub)
+
+
+def iter_errors(info: InspectionResult) -> Iterator[tuple[str, str]]:
+    """``(path, message)`` for every read/parse failure recorded anywhere under ``info``."""
+
+    for message in info.errors:
+        yield info.path, message
+    if isinstance(info, PackageInfo):
+        for module in info.modules:
+            yield from iter_errors(module)
+        for sub in info.packages:
+            yield from iter_errors(sub)
+
+
 __all__ = [
     "SCHEMA_VERSION",
     "FUNCTION_KINDS",
@@ -138,4 +163,6 @@ __all__ = [
     "ModuleInfo",
     "PackageInfo",
     "InspectionResult",
+    "iter_modules",
+    "iter_errors",
 ]

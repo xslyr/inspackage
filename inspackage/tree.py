@@ -46,8 +46,8 @@ class TreeBuilder:
         CategoryStyle.item_errors,
     ]
 
-    def __init__(self, ctx: Context):
-        self.interactive = not ctx.obj["static"]
+    def __init__(self, ctx: Context | None = None, *, interactive: bool | None = None):
+        self.interactive = interactive if interactive is not None else not ctx.obj["static"]  # type: ignore[union-attr]
         self.widget = None
 
     def build(self, tree_map: dict):
