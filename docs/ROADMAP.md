@@ -12,36 +12,38 @@ Milestones: [v0.2.0](https://github.com/xslyr/inspackage/milestone/1) · [v0.3.0
 
 | ID | Onde | Problema | Confirmado |
 |----|------|----------|-----------|
-| B01 [#3](https://github.com/xslyr/inspackage/issues/3) | `cli.py:41` / `_inspection.py:27` | `inspackage .` (exemplo do README) quebra: `.` é tratado como nome de pacote → `ImportError` com traceback. | ✅ rodado |
-| B02 [#3](https://github.com/xslyr/inspackage/issues/3) | `_inspection.py:33` | Pacote de módulo único (ex.: `typing_extensions`, `six`) → `dirname(spec.origin)` = `site-packages` → varre o venv inteiro. | ✅ rodado |
-| B03 [#3](https://github.com/xslyr/inspackage/issues/3) | `_inspection.py:29` | Namespace packages (sem `__init__.py`) dão "not found" porque `spec.origin` é `None`; deveria usar `submodule_search_locations`. | ✅ rodado |
-| B04 [#4](https://github.com/xslyr/inspackage/issues/4) | `tree.py:60` | `--dir arquivo.py` → `KeyError: 'nodes'`; mapa vazio (`{}`) → `KeyError: 'name'`. | ✅ rodado |
-| B05 [#5](https://github.com/xslyr/inspackage/issues/5) | `_inspection.py:42-43` | `SyntaxError`/`UnicodeDecodeError` em um arquivo derruba a inspeção toda; `PermissionError` no `scandir` idem. | ✅ rodado (SyntaxError) |
-| B06 [#6](https://github.com/xslyr/inspackage/issues/6) | `_inspection.py:41` | `".py" in name` aceita `.pyc`, `.pyi`, `x.python.txt`. | leitura |
-| B07 [#6](https://github.com/xslyr/inspackage/issues/6) | `_inspection.py:41,49` | Ignora tudo que começa com `_` → some `__init__.py` (onde fica a API pública!), `__main__.py`, `_private/`. | leitura |
-| B08 [#7](https://github.com/xslyr/inspackage/issues/7) | `_inspection.py:66,70,86,89` | `str(node.targets[0])` é o repr do nó AST → filtro de privados nunca funciona; atribuições múltiplas/tuplas ignoradas. | leitura |
-| B09 [#8](https://github.com/xslyr/inspackage/issues/8) | `_inspection.py:73,91` | `AsyncFunctionDef` ignorado (top-level e métodos). Classes aninhadas ignoradas. | leitura |
-| B10 [#7](https://github.com/xslyr/inspackage/issues/7) | `_inspection.py:92-105` | Classificação por substring do código-fonte: qualquer método que chame `super().__init__` vira "constructor"; método com `def _x` interno some; `@property` detectado por texto. Usar `node.name` e `node.decorator_list`. | leitura |
-| B11 [#7](https://github.com/xslyr/inspackage/issues/7) | `_inspection.py:100-101` | `params.replace("self", "")` corrompe nomes (`itself` → `it`, `cls_name` → `_name`). Remover o 1º argumento via AST. | leitura |
-| B12 [#9](https://github.com/xslyr/inspackage/issues/9) | `_inspection.py:95` vs `tree.py:175` | Grava em `"properties"` mas o renderizador procura `"property"` → propriedades nunca aparecem. | leitura |
-| B13 [#9](https://github.com/xslyr/inspackage/issues/9) | `tree.py:207` | `dark_theme` lê a variável `LIGHT_THEME`. | leitura |
+| B01 [#3](https://github.com/xslyr/inspackage/issues/3) ✅ | `cli.py:41` / `_inspection.py:27` | `inspackage .` (exemplo do README) quebra: `.` é tratado como nome de pacote → `ImportError` com traceback. | ✅ rodado |
+| B02 [#3](https://github.com/xslyr/inspackage/issues/3) ✅ | `_inspection.py:33` | Pacote de módulo único (ex.: `typing_extensions`, `six`) → `dirname(spec.origin)` = `site-packages` → varre o venv inteiro. | ✅ rodado |
+| B03 [#3](https://github.com/xslyr/inspackage/issues/3) ✅ | `_inspection.py:29` | Namespace packages (sem `__init__.py`) dão "not found" porque `spec.origin` é `None`; deveria usar `submodule_search_locations`. | ✅ rodado |
+| B04 [#4](https://github.com/xslyr/inspackage/issues/4) 🟡 | `tree.py:60` | `--dir arquivo.py` → `KeyError: 'nodes'`; mapa vazio (`{}`) → `KeyError: 'name'`. | ✅ rodado |
+| B05 [#5](https://github.com/xslyr/inspackage/issues/5) ✅ | `_inspection.py:42-43` | `SyntaxError`/`UnicodeDecodeError` em um arquivo derruba a inspeção toda; `PermissionError` no `scandir` idem. | ✅ rodado (SyntaxError) |
+| B06 [#6](https://github.com/xslyr/inspackage/issues/6) ✅ | `_inspection.py:41` | `".py" in name` aceita `.pyc`, `.pyi`, `x.python.txt`. | leitura |
+| B07 [#6](https://github.com/xslyr/inspackage/issues/6) ✅ | `_inspection.py:41,49` | Ignora tudo que começa com `_` → some `__init__.py` (onde fica a API pública!), `__main__.py`, `_private/`. | leitura |
+| B08 [#7](https://github.com/xslyr/inspackage/issues/7) ✅ | `_inspection.py:66,70,86,89` | `str(node.targets[0])` é o repr do nó AST → filtro de privados nunca funciona; atribuições múltiplas/tuplas ignoradas. | leitura |
+| B09 [#8](https://github.com/xslyr/inspackage/issues/8) ✅ | `_inspection.py:73,91` | `AsyncFunctionDef` ignorado (top-level e métodos). Classes aninhadas ignoradas. | leitura |
+| B10 [#7](https://github.com/xslyr/inspackage/issues/7) ✅ | `_inspection.py:92-105` | Classificação por substring do código-fonte: qualquer método que chame `super().__init__` vira "constructor"; método com `def _x` interno some; `@property` detectado por texto. Usar `node.name` e `node.decorator_list`. | leitura |
+| B11 [#7](https://github.com/xslyr/inspackage/issues/7) ✅ | `_inspection.py:100-101` | `params.replace("self", "")` corrompe nomes (`itself` → `it`, `cls_name` → `_name`). Remover o 1º argumento via AST. | leitura |
+| B12 [#9](https://github.com/xslyr/inspackage/issues/9) ✅ | `_inspection.py:95` vs `tree.py:175` | Grava em `"properties"` mas o renderizador procura `"property"` → propriedades nunca aparecem. | leitura |
+| B13 [#9](https://github.com/xslyr/inspackage/issues/9) ✅ | `tree.py:207` | `dark_theme` lê a variável `LIGHT_THEME`. | leitura |
 | B14 [#10](https://github.com/xslyr/inspackage/issues/10) | `cli.py:72` | `--save --dir .` relativo → arquivo `..json`; e `--save` só grava *depois* de fechar o TUI. | leitura |
 | B15 [#11](https://github.com/xslyr/inspackage/issues/11) | `_callbacks.py:9-18` | Help manual desatualizado: anuncia `-i/--interactive` (não existe) e omite `--static`, `--dir`, `--env`. `--verbose` não faz nada. | leitura |
-| B16 [#5](https://github.com/xslyr/inspackage/issues/5) | `_inspection.py:51` | `scandir` sem ordenação → saída não determinística; segue symlinks (risco de loop). | leitura |
+| B16 [#5](https://github.com/xslyr/inspackage/issues/5) ✅ | `_inspection.py:51` | `scandir` sem ordenação → saída não determinística; segue symlinks (risco de loop). | leitura |
 | B17 [#23](https://github.com/xslyr/inspackage/issues/23) | `pyproject.toml` | `rich` usado diretamente mas não declarado; classifiers só citam 3.13; versão duplicada em `__init__.py` (usar `importlib.metadata`). `.python-version`=3.10 não instalado no pyenv local. | leitura |
-| B18 [#12](https://github.com/xslyr/inspackage/issues/12) | `tests/` | Asserts dentro de `pytest.raises` nunca executam; teste vazio (`...`); testes dependem de pacotes do venv (`rich`, `dotenv`). | leitura |
+| B18 [#12](https://github.com/xslyr/inspackage/issues/12) ✅ | `tests/` | Asserts dentro de `pytest.raises` nunca executam; teste vazio (`...`); testes dependem de pacotes do venv (`rich`, `dotenv`). | leitura |
+
+Legenda: ✅ corrigido na branch `milestone/v0.2.0` · 🟡 parcial (B04: falta mensagem para diretório sem módulos, #4).
 
 ## 2. Fases
 
 ### Fase 0 — Rede de segurança (testes primeiro)
-_Issue: #13 — milestone v0.2.0_
+_Issue: #13 — milestone v0.2.0 — ✅ concluída_
 - Criar `tests/fixtures/samplepkg/` cobrindo: `__init__.py` com reexports, módulo com async, property, classmethod/staticmethod, classe aninhada, herança, constantes anotadas, privados, arquivo com erro de sintaxe, subpacote, namespace package, módulo único.
 - Testes de caracterização do comportamento atual (marcar com `xfail` os bugs B01–B18).
 - `conftest.py` com fixture `run_cli` (CliRunner) e snapshot simples de JSON.
 - Meta: cobertura ≥ 85% em `inspackage/`.
 
 ### Fase 1 — Núcleo de inspeção correto
-_Issue: #14 — milestone v0.2.0_
+_Issue: #14 — milestone v0.2.0 — ✅ modelo pronto; faltam opções de CLI e JSON com schema_version (#15)_
 - Novo modelo de dados tipado (`inspackage/model.py`, dataclasses): `PackageInfo`, `ModuleInfo`, `ClassInfo`, `FunctionInfo`, `VariableInfo` com `lineno`, `docstring` (1ª linha), `decorators`, `bases`, `is_async`, `kind` (method/classmethod/staticmethod/property), `imports`, `__all__`.
 - Resolver origem: nome → path (pacote, módulo único, namespace) e path → módulo; aceitar `.`.
 - Coletar erros por arquivo em `ModuleInfo.errors` em vez de abortar.
