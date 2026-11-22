@@ -43,29 +43,24 @@ def test_static_output_lists_properties(static_output):
     assert "prop_value" in static_output
 
 
-@pytest.mark.xfail(strict=True, reason="B10 #7")
 def test_static_output_lists_method_that_calls_super_init(static_output):
     assert "reset" in static_output
 
 
-@pytest.mark.xfail(strict=True, reason="B11 #7")
 def test_static_output_keeps_parameter_names_intact(static_output):
     assert "itself" in static_output
     assert "cls_name" in static_output
 
 
-@pytest.mark.xfail(strict=True, reason="B09 #8")
 def test_static_output_lists_async_and_nested(static_output):
     for name in ("top_level_async", "async_method", "Inner"):
         assert name in static_output, name
 
 
-@pytest.mark.xfail(strict=True, reason="B07 #6")
 def test_static_output_lists_init_py(static_output):
     assert "__init__.py" in static_output
 
 
-@pytest.mark.xfail(strict=True, reason="B08 #7")
 def test_static_output_hides_private_variables_and_splits_tuples(static_output):
     assert "_PRIVATE" not in static_output
     assert "SECOND" in static_output

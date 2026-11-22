@@ -1,5 +1,6 @@
 {
   "category": "file",
+  "errors": [],
   "name": "single_module.py",
   "structure": {
     "methods": [

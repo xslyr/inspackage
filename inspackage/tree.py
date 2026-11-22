@@ -2,6 +2,7 @@ import os
 from enum import Enum
 from typing import Tuple
 
+from rich.markup import escape
 from rich.tree import Tree as RichTree
 from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header, Tree
@@ -29,6 +30,7 @@ CategoryStyle = Enum(
         "class_item_properties",
         "class_title_methods",
         "class_item_methods",
+        "item_errors",
     ],
 )
 
@@ -41,6 +43,7 @@ class TreeBuilder:
         CategoryStyle.class_item_vars,
         CategoryStyle.class_item_methods,
         CategoryStyle.class_item_properties,
+        CategoryStyle.item_errors,
     ]
 
     def __init__(self, ctx: Context):
@@ -57,8 +60,12 @@ class TreeBuilder:
         else:
             root_node = RichTree(tree_map["name"])
 
-        for data in tree_map["nodes"]:
-            self.__create_nodes_from_map(data, root_node)
+        if tree_map["category"] == "file":  # single module as root
+            self.__populate_file_node(tree_map, root_node)
+        else:
+            self.__add_error_nodes(tree_map, root_node)
+            for data in tree_map["nodes"]:
+                self.__create_nodes_from_map(data, root_node)
 
         return self.widget if self.interactive else root_node
 
@@ -119,6 +126,9 @@ class TreeBuilder:
                 pattern = "{} ({})" if not data[-1] else "{} ({}) -> {}"
                 result = pattern.format(*data)
 
+            case CategoryStyle.item_errors:
+                result = f"{Icon.errors} {escape(str(data))}"
+
         return str(result)
 
     def __add_new_node(self, parent_node: NodeType, txt: str | Tuple, category: CategoryStyle, expand: bool = False):
@@ -135,15 +145,24 @@ class TreeBuilder:
 
         if data["category"] == "directory":
             current_node = self.__add_new_node(parent_node, data["name"], CategoryStyle.paths, True)
+            self.__add_error_nodes(data, current_node)
             for item in data["nodes"]:
                 self.__create_nodes_from_map(item, current_node)
             return current_node
 
         return self.__create_file_node(data, parent_node)
 
+    def __add_error_nodes(self, data: dict, parent_node: NodeType):
+        for error in data.get("errors", []):
+            self.__add_new_node(parent_node, error, CategoryStyle.item_errors, False)
+
     def __create_file_node(self, data: dict, parent_node: NodeType):
         current_node = self.__add_new_node(parent_node, data["name"], CategoryStyle.files, False)
+        self.__populate_file_node(data, current_node)
+        return current_node
 
+    def __populate_file_node(self, data: dict, current_node: NodeType):
+        self.__add_error_nodes(data, current_node)
         for key, value in data["structure"].items():
             if len(value) > 0:
                 match key:
@@ -159,40 +178,37 @@ class TreeBuilder:
 
                     case _:  # class
                         for c in value:
-                            node_n1 = self.__add_new_node(current_node, c["name"], CategoryStyle.title_class, False)
-                            for cls_key, cls_val in c.items():
-                                match cls_key:
-                                    case "constructor":
-                                        self.__add_new_node(node_n1, cls_val[0], CategoryStyle.class_constructor, False)
+                            self.__create_class_node(c, current_node)
 
-                                    case "variables":
-                                        node_n2 = self.__add_new_node(
-                                            node_n1, "", CategoryStyle.class_title_vars, False
-                                        )
-                                        for v in cls_val:
-                                            self.__add_new_node(node_n2, str(v), CategoryStyle.class_item_vars, False)
+    def __create_class_node(self, c: dict, parent_node: NodeType):
+        node_n1 = self.__add_new_node(parent_node, c["name"], CategoryStyle.title_class, False)
+        for cls_key, cls_val in c.items():
+            match cls_key:
+                case "constructor":
+                    self.__add_new_node(node_n1, cls_val[0], CategoryStyle.class_constructor, False)
 
-                                    case "property":
-                                        node_n2 = self.__add_new_node(
-                                            node_n1, "", CategoryStyle.class_title_properties, False
-                                        )
-                                        for v in cls_val:
-                                            if isinstance(v, tuple):
-                                                self.__add_new_node(
-                                                    node_n2, v, CategoryStyle.class_item_properties, False
-                                                )
-                                            else:
-                                                self.__add_new_node(
-                                                    node_n2, str(v), CategoryStyle.class_item_properties, False
-                                                )
+                case "variables":
+                    node_n2 = self.__add_new_node(node_n1, "", CategoryStyle.class_title_vars, False)
+                    for v in cls_val:
+                        self.__add_new_node(node_n2, str(v), CategoryStyle.class_item_vars, False)
 
-                                    case "methods":
-                                        node_n2 = self.__add_new_node(
-                                            node_n1, "", CategoryStyle.class_title_methods, False
-                                        )
-                                        for v in cls_val:
-                                            self.__add_new_node(node_n2, v, CategoryStyle.class_item_methods, False)
-        return current_node
+                case "property":
+                    node_n2 = self.__add_new_node(node_n1, "", CategoryStyle.class_title_properties, False)
+                    for v in cls_val:
+                        if isinstance(v, tuple):
+                            self.__add_new_node(node_n2, v, CategoryStyle.class_item_properties, False)
+                        else:
+                            self.__add_new_node(node_n2, str(v), CategoryStyle.class_item_properties, False)
+
+                case "methods":
+                    node_n2 = self.__add_new_node(node_n1, "", CategoryStyle.class_title_methods, False)
+                    for v in cls_val:
+                        self.__add_new_node(node_n2, v, CategoryStyle.class_item_methods, False)
+
+                case "classes":  # nested classes
+                    for nested in cls_val:
+                        self.__create_class_node(nested, node_n1)
+        return node_n1
 
 
 class InspackageApp(App):

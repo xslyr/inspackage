@@ -82,14 +82,12 @@ def test_dotted_names_and_hidden_directories_are_ignored(tmp_path):
 # ---------- B01-B03: resolving the target ----------
 
 
-@pytest.mark.xfail(strict=True, reason="B02 #3")
 def test_single_module_by_name_inspects_only_that_module(on_syspath):
     tree = get_tree_map("single_module")
     assert tree_has(tree, "single_func")
     assert not tree_contains(tree, "samplepkg")
 
 
-@pytest.mark.xfail(strict=True, reason="B03 #3")
 def test_namespace_package_by_name_is_resolved(on_syspath):
     tree = get_tree_map("nspkg")
     assert tree_has(tree, "mod.py")
@@ -99,14 +97,12 @@ def test_namespace_package_by_name_is_resolved(on_syspath):
 # ---------- B05, B16: robustness and determinism ----------
 
 
-@pytest.mark.xfail(strict=True, reason="B05 #5")
 def test_syntax_error_in_one_file_does_not_abort_inspection(samplepkg_path):
     tree = get_tree_map(package_path=str(samplepkg_path))
     assert tree_has(tree, "core.py")
     assert tree_has(tree, "util.py")
 
 
-@pytest.mark.xfail(strict=True, reason="B05 #5")
 def test_undecodable_file_does_not_abort_inspection(tmp_path):
     pkg = tmp_path / "pkg"
     pkg.mkdir()
@@ -116,7 +112,6 @@ def test_undecodable_file_does_not_abort_inspection(tmp_path):
     assert tree_has(tree, "good.py")
 
 
-@pytest.mark.xfail(strict=True, reason="B05 #5")
 @pytest.mark.skipif(os.geteuid() == 0, reason="root ignores directory permissions")
 def test_unreadable_directory_is_skipped_silently(tmp_path):
     pkg = tmp_path / "pkg"
@@ -131,7 +126,6 @@ def test_unreadable_directory_is_skipped_silently(tmp_path):
     assert tree_has(tree, "ok.py")
 
 
-@pytest.mark.xfail(strict=True, reason="B16 #5")
 def test_children_are_sorted_deterministically(tmp_path):
     pkg = tmp_path / "pkg"
     pkg.mkdir()
@@ -142,7 +136,6 @@ def test_children_are_sorted_deterministically(tmp_path):
     assert [node["name"] for node in tree["nodes"]] == names
 
 
-@pytest.mark.xfail(strict=True, reason="B16 #5")
 def test_symlink_loops_are_not_followed(tmp_path):
     pkg = tmp_path / "pkg"
     pkg.mkdir()
@@ -156,7 +149,6 @@ def test_symlink_loops_are_not_followed(tmp_path):
 # ---------- B06, B07: which files are inspected ----------
 
 
-@pytest.mark.xfail(strict=True, reason="B06 #6")
 def test_only_dot_py_files_are_inspected(samplepkg_ok):
     (samplepkg_ok / "compiled.pyc").write_text("PYC_MARKER = 1\n")
     tree = get_tree_map(package_path=str(samplepkg_ok))
@@ -165,20 +157,17 @@ def test_only_dot_py_files_are_inspected(samplepkg_ok):
         assert not tree_has(tree, name), name
 
 
-@pytest.mark.xfail(strict=True, reason="B07 #6")
 def test_init_py_is_inspected(samplepkg_path):
     tree = get_tree_map(package_path=str(samplepkg_path / "sub"))
     assert tree_has(tree, "__init__.py")
     assert tree_has(tree, "SUB_EXPORT")
 
 
-@pytest.mark.xfail(strict=True, reason="B07 #6")
 def test_main_py_is_inspected(samplepkg_path):
     tree = get_tree_map(package_path=str(samplepkg_path / "__main__.py"))
     assert tree_has(tree, "ENTRY")
 
 
-@pytest.mark.xfail(strict=True, reason="B07 #6")
 def test_package_init_with_reexports_is_listed(samplepkg_ok):
     tree = get_tree_map(package_path=str(samplepkg_ok))
     assert tree_has(tree, "__init__.py")
@@ -188,26 +177,22 @@ def test_package_init_with_reexports_is_listed(samplepkg_ok):
 # ---------- B08: variables ----------
 
 
-@pytest.mark.xfail(strict=True, reason="B08 #7")
 def test_private_module_variables_are_hidden(samplepkg_path):
     tree = get_tree_map(package_path=str(samplepkg_path / "constants.py"))
     assert not tree_contains(tree, "_PRIVATE")
 
 
-@pytest.mark.xfail(strict=True, reason="B08 #7")
 def test_private_class_variables_are_hidden(samplepkg_path):
     tree = get_tree_map(package_path=str(samplepkg_path / "core.py"))
     assert not tree_contains(tree, "_hidden_var")
 
 
-@pytest.mark.xfail(strict=True, reason="B08 #7")
 def test_tuple_assignment_yields_each_name(samplepkg_path):
     tree = get_tree_map(package_path=str(samplepkg_path / "constants.py"))
     assert tree_has(tree, "FIRST")
     assert tree_has(tree, "SECOND")
 
 
-@pytest.mark.xfail(strict=True, reason="B08 #7")
 def test_chained_assignment_yields_every_target(samplepkg_path):
     tree = get_tree_map(package_path=str(samplepkg_path / "constants.py"))
     assert tree_has(tree, "A")
@@ -217,19 +202,16 @@ def test_chained_assignment_yields_every_target(samplepkg_path):
 # ---------- B09: async and nested ----------
 
 
-@pytest.mark.xfail(strict=True, reason="B09 #8")
 def test_async_top_level_function_is_collected(samplepkg_path):
     tree = get_tree_map(package_path=str(samplepkg_path / "core.py"))
     assert tree_has(tree, "top_level_async")
 
 
-@pytest.mark.xfail(strict=True, reason="B09 #8")
 def test_async_method_is_collected(samplepkg_path):
     tree = get_tree_map(package_path=str(samplepkg_path / "core.py"))
     assert tree_has(tree, "async_method")
 
 
-@pytest.mark.xfail(strict=True, reason="B09 #8")
 def test_nested_class_is_collected(samplepkg_path):
     tree = get_tree_map(package_path=str(samplepkg_path / "core.py"))
     assert tree_has(tree, "Inner")
@@ -239,26 +221,22 @@ def test_nested_class_is_collected(samplepkg_path):
 # ---------- B10, B11: classification and parameters ----------
 
 
-@pytest.mark.xfail(strict=True, reason="B10 #7")
 def test_method_calling_super_init_is_not_a_constructor(samplepkg_path):
     tree = get_tree_map(package_path=str(samplepkg_path / "core.py"))
     child = _find_class(tree, "Child")
     assert [m[0] if isinstance(m, tuple) else m for m in child.get("constructor", [])] == ["__init__"]
 
 
-@pytest.mark.xfail(strict=True, reason="B10 #7")
 def test_method_with_inner_private_def_is_still_collected(samplepkg_path):
     tree = get_tree_map(package_path=str(samplepkg_path / "core.py"))
     assert tree_has(tree, "uses_inner_def")
 
 
-@pytest.mark.xfail(strict=True, reason="B11 #7")
 def test_parameter_named_itself_is_not_corrupted(samplepkg_path):
     tree = get_tree_map(package_path=str(samplepkg_path / "core.py"))
     assert tree_contains(tree, "itself")
 
 
-@pytest.mark.xfail(strict=True, reason="B11 #7")
 def test_parameter_named_cls_name_is_not_corrupted(samplepkg_path):
     tree = get_tree_map(package_path=str(samplepkg_path / "core.py"))
     assert tree_contains(tree, "cls_name")

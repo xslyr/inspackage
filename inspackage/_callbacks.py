@@ -54,3 +54,4 @@ class Icon:
     classes = "🏗️"
     variables = "🏷️"
     methods = "🔧"
+    errors = "⚠"

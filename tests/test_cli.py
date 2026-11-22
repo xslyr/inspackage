@@ -80,7 +80,6 @@ def test_save_writes_json_named_after_the_package_dir(run_cli, samplepkg_ok, tmp
 # ---------- B01, B04: target handling ----------
 
 
-@pytest.mark.xfail(strict=True, reason="B01 #3")
 def test_dot_means_current_directory(run_cli, samplepkg_ok, monkeypatch):
     monkeypatch.chdir(samplepkg_ok)
     result = run_cli("--static", ".")
@@ -88,14 +87,12 @@ def test_dot_means_current_directory(run_cli, samplepkg_ok, monkeypatch):
     assert "core.py" in result.output
 
 
-@pytest.mark.xfail(strict=True, reason="B04 #4")
 def test_dir_pointing_to_a_file_renders_that_file(run_cli, samplepkg_path):
     result = run_cli("--static", "--dir", str(samplepkg_path / "core.py"))
     assert result.exit_code == 0
     assert "Base" in result.output
 
 
-@pytest.mark.xfail(strict=True, reason="B04 #4")
 def test_dir_pointing_to_non_python_file_does_not_crash_with_keyerror(run_cli, tmp_path):
     target = tmp_path / "readme.txt"
     target.write_text("hello")
@@ -103,7 +100,6 @@ def test_dir_pointing_to_non_python_file_does_not_crash_with_keyerror(run_cli, t
     assert not isinstance(result.exception, KeyError)
 
 
-@pytest.mark.xfail(strict=True, reason="B05 #5")
 def test_cli_survives_a_file_with_syntax_error(run_cli, samplepkg_path):
     result = run_cli("--static", "--dir", str(samplepkg_path))
     assert result.exit_code == 0
