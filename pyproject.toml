@@ -52,7 +52,7 @@ addopts = "--doctest-modules"
 [tool.taskipy.tasks]
 lint = "pylint inspackage"
 ruff = "ruff format ./inspackage && ruff check --fix ./inspackage"
-test = "pytest -v --cov=inspackage"
+test = "pytest -v --cov=inspackage --cov-fail-under=85"
 post_test = "coverage html"
 
 
@@ -78,6 +78,7 @@ disable = [
 
 [tool.ruff]
 line-length = 120
+extend-exclude = ["tests/fixtures"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W"]
