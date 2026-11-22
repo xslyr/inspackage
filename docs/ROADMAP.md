@@ -28,7 +28,7 @@ Milestones: [v0.2.0](https://github.com/xslyr/inspackage/milestone/1) · [v0.3.0
 | B14 [#10](https://github.com/xslyr/inspackage/issues/10) ✅ | `cli.py:72` | `--save --dir .` relativo → arquivo `..json`; e `--save` só grava *depois* de fechar o TUI. | leitura |
 | B15 [#11](https://github.com/xslyr/inspackage/issues/11) ✅ | `_callbacks.py:9-18` | Help manual desatualizado: anuncia `-i/--interactive` (não existe) e omite `--static`, `--dir`, `--env`. `--verbose` não faz nada. | leitura |
 | B16 [#5](https://github.com/xslyr/inspackage/issues/5) ✅ | `_inspection.py:51` | `scandir` sem ordenação → saída não determinística; segue symlinks (risco de loop). | leitura |
-| B17 [#23](https://github.com/xslyr/inspackage/issues/23) | `pyproject.toml` | `rich` usado diretamente mas não declarado; classifiers só citam 3.13; versão duplicada em `__init__.py` (usar `importlib.metadata`). `.python-version`=3.10 não instalado no pyenv local. | leitura |
+| B17 [#23](https://github.com/xslyr/inspackage/issues/23) ✅ | `pyproject.toml` | `rich` usado diretamente mas não declarado; classifiers só citam 3.13; versão duplicada em `__init__.py` (usar `importlib.metadata`). `.python-version`=3.10 não instalado no pyenv local. | leitura |
 | B18 [#12](https://github.com/xslyr/inspackage/issues/12) ✅ | `tests/` | Asserts dentro de `pytest.raises` nunca executam; teste vazio (`...`); testes dependem de pacotes do venv (`rich`, `dotenv`). | leitura |
 
 Legenda: ✅ corrigido na branch `milestone/v0.2.0`.
@@ -75,7 +75,7 @@ _Issues: #19 (llm), #20 (graph), #21 (graphify), #22 (MCP) — milestone v0.4.0_
 - Distribuir uma skill (`inspect-python-package`) que ensina agentes a usar a CLI.
 
 ### Fase 5 — Release
-_Issues: #23 (versão/deps), #24 (CI), #25 (Trusted Publishing), #26 (CHANGELOG) — milestone v0.2.0_
+_Issues: #23 (versão/deps), #24 (CI), #25 (Trusted Publishing), #26 (CHANGELOG) — milestone v0.2.0 — ✅ concluída (falta só o bump 0.2.0 + tag, via /release)_
 - Versão única via `importlib.metadata.version("inspackage")`.
 - CI: matriz Python 3.10–3.13; `ruff format --check` (CI não deve reformatar); `pytest --cov --cov-fail-under=85`.
 - `CHANGELOG.md`, classifiers corretos, `rich` como dependência explícita, `py.typed`.
