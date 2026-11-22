@@ -1,6 +1,10 @@
+import ast
+import importlib.machinery
+import importlib.util
 import json
 import sys
 import textwrap
+from types import SimpleNamespace
 
 import pytest
 from helpers import assert_snapshot, tree_has
@@ -187,6 +191,90 @@ def test_dynamic_all_is_none_and_variables_dedupe(tmp_path):
     ]
 
 
+def test_all_after_non_literal_assignment_is_unknown(tmp_path):
+    source = "__all__ = foo()\n__all__ += ['x']\n__all__.extend(['y'])\n__all__.append('z')\n"
+    assert _module(_write(tmp_path / "dyn.py", source)).all_exports is None
+    source = "__all__ = ['a']\n__all__ += helper()\n__all__ += ['x']\n"
+    assert _module(_write(tmp_path / "dyn_aug.py", source)).all_exports is None
+    source = "__all__ = foo()\n__all__ = ['a']\n__all__.extend(['b'])\n__all__.append('c')\n__all__.extend([])\n"
+    assert _module(_write(tmp_path / "relit.py", source)).all_exports == ["a", "b", "c"]
+
+
+def test_definitions_inside_top_level_if_and_try_are_collected(tmp_path):
+    source = """
+        import sys
+
+        if sys.version_info >= (3, 11):
+            def compat():
+                pass
+            FLAG = True
+        else:
+            def compat(x):
+                pass
+            FLAG = False
+
+        try:
+            from fast import y
+        except ImportError:
+            def y():
+                pass
+        else:
+            class Fast:
+                pass
+        finally:
+            def cleanup():
+                def nested_should_not_appear():
+                    pass
+
+        class Holder:
+            if sys.platform == "win32":
+                def method(self):
+                    pass
+            else:
+                def method(self, extra):
+                    pass
+    """
+    info = _module(_write(tmp_path / "cond.py", source))
+    assert [f.name for f in info.functions] == ["compat", "y", "cleanup"]
+    assert _by_name(info.functions, "compat").params == ""
+    assert [c.name for c in info.classes] == ["Fast", "Holder"]
+    assert [v.name for v in info.variables] == ["FLAG"]
+    assert [(m.name, m.params) for m in _by_name(info.classes, "Holder").methods] == [("method", "")]
+
+
+def test_overload_stubs_are_dropped_when_implementation_exists(tmp_path):
+    source = """
+        import typing
+        from typing import overload
+
+        @overload
+        def f(x: int) -> int: ...
+        @typing.overload
+        def f(x: str) -> str: ...
+        def f(x):
+            return x
+
+        @overload
+        def only_stubs(x: int) -> int: ...
+        @overload
+        def only_stubs(x: str) -> str: ...
+
+        class C:
+            @overload
+            def m(self, x: int) -> int: ...
+            @overload
+            def m(self, x: str) -> str: ...
+            def m(self, x):
+                return x
+    """
+    info = _module(_write(tmp_path / "ov.py", source))
+    assert [(f.name, f.params, f.decorators) for f in info.functions] == [
+        ("f", "x", []),
+        ("only_stubs", "x: int", ["overload"]),
+    ]
+    assert [(m.name, m.params) for m in info.classes[0].methods] == [("m", "x")]
+
+
 # ---------- errors ----------
 
 
@@ -203,6 +291,27 @@ def test_undecodable_file_error_is_recorded(tmp_path):
     (tmp_path / "pkg" / "bad.py").write_bytes(b"X = '\xff\xfe'\n")
     pkg = inspect_path(str(tmp_path / "pkg"))
     assert _by_name(pkg.modules, "bad.py").errors
+
+
+def test_recursion_error_while_collecting_is_recorded(tmp_path):
+    pkg = tmp_path / "pkg"
+    _write(pkg / "deep.py", "def f(x=" + "+".join(["1"] * 3000) + "):\n    pass\n")
+    _write(pkg / "ok.py", "OK = 1\n")
+    info = inspect_path(str(pkg))
+    deep = _by_name(info.modules, "deep.py")
+    assert deep.errors and deep.errors[0].startswith(("RecursionError", "MemoryError", "SyntaxError"))
+    assert deep.functions == []
+    assert [v.name for v in _by_name(info.modules, "ok.py").variables] == ["OK"]
+
+
+def test_unexpected_error_while_collecting_is_recorded(tmp_path, monkeypatch):
+    def boom(_node):
+        raise RecursionError("maximum recursion depth exceeded")
+
+    monkeypatch.setattr(ast, "unparse", boom)
+    info = _module(_write(tmp_path / "m.py", "def f(x=1):\n    pass\n"))
+    assert info.errors == ["RecursionError: maximum recursion depth exceeded"]
+    assert info.functions == []
 
 
 # ---------- filesystem walk ----------
@@ -263,6 +372,58 @@ def test_namespace_package_split_across_directories_is_merged(tmp_path, monkeypa
     info = inspect_target("splitns")
     assert info.kind == "namespace"
     assert [m.name for m in info.modules] == ["a.py", "b.py"]
+
+
+def test_namespace_subpackages_with_same_name_are_merged_recursively(tmp_path, monkeypatch):
+    _write(tmp_path / "one" / "nsx" / "sub" / "a.py", "A = 1\n")
+    _write(tmp_path / "one" / "nsx" / "sub" / "deep" / "c.py", "C = 1\n")
+    _write(tmp_path / "two" / "nsx" / "sub" / "b.py", "B = 1\n")
+    _write(tmp_path / "two" / "nsx" / "sub" / "deep" / "d.py", "D = 1\n")
+    _write(tmp_path / "two" / "nsx" / "other" / "e.py", "E = 1\n")
+    monkeypatch.syspath_prepend(str(tmp_path / "two"))
+    monkeypatch.syspath_prepend(str(tmp_path / "one"))
+    info = inspect_target("nsx")
+    assert [p.name for p in info.packages] == ["other", "sub"]
+    sub = _by_name(info.packages, "sub")
+    assert [m.name for m in sub.modules] == ["a.py", "b.py"]
+    assert [p.name for p in sub.packages] == ["deep"]
+    assert [m.name for m in sub.packages[0].modules] == ["c.py", "d.py"]
+
+
+def test_frozen_stdlib_module_falls_back_to_loader_state_filename(tmp_path, monkeypatch):
+    source = _write(tmp_path / "frozenmod.py", "def frozen_func():\n    pass\n")
+    spec = importlib.machinery.ModuleSpec(
+        "frozenmod",
+        importlib.machinery.FrozenImporter,
+        origin="frozen",
+        loader_state=SimpleNamespace(filename=str(source)),
+    )
+    real_find_spec = importlib.util.find_spec
+    monkeypatch.setattr(
+        importlib.util, "find_spec", lambda name, *a: spec if name == "frozenmod" else real_find_spec(name, *a)
+    )
+    assert resolve_target("frozenmod") == [str(source)]
+    assert [f.name for f in inspect_target("frozenmod").functions] == ["frozen_func"]
+
+
+def test_frozen_module_without_source_file_is_not_python_source(tmp_path, monkeypatch):
+    missing = str(tmp_path / "gone.py")
+    spec = importlib.machinery.ModuleSpec(
+        "frozenmod", importlib.machinery.FrozenImporter, origin="frozen", loader_state=SimpleNamespace(filename=missing)
+    )
+    monkeypatch.setattr(importlib.util, "find_spec", lambda name, *a: spec)
+    with pytest.raises(NotPythonSourceError):
+        resolve_target("frozenmod")
+
+
+def test_distribution_style_name_is_a_missing_package_with_hint(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(TargetNotFoundError) as err:
+        resolve_target("typing-extensions-xyz")
+    assert "Package 'typing-extensions-xyz' not found" in err.value.message
+    assert "Did you mean 'typing_extensions_xyz'?" in err.value.message
+    (tmp_path / "my-dir").mkdir()
+    assert resolve_target("my-dir") == [str(tmp_path / "my-dir")]
 
 
 def test_dot_and_path_like_names_are_paths(samplepkg_ok, monkeypatch):

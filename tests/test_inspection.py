@@ -4,7 +4,7 @@ import pytest
 from helpers import collect_strings, tree_contains, tree_has
 from typer import Exit
 
-from inspackage._inspection import find_package_path, get_tree_map
+from inspackage._inspection import find_package_path, get_tree_map, inspect_path
 
 # ---------- behaviour that already works ----------
 
@@ -144,6 +144,20 @@ def test_symlink_loops_are_not_followed(tmp_path):
     tree = get_tree_map(package_path=str(pkg))
     assert tree_has(tree, "a.py")
     assert collect_strings(tree).count("a.py") == 1
+    assert tree["errors"] == ["Skipped symlinked directory: loop"]
+
+
+def test_symlinked_directory_is_reported_in_parent_errors(tmp_path):
+    real = tmp_path / "real"
+    real.mkdir()
+    (real / "inner.py").write_text("INNER = 1\n")
+    pkg = tmp_path / "pkg"
+    pkg.mkdir()
+    (pkg / "inner_link").symlink_to(real, target_is_directory=True)
+    (pkg / "_private_link").symlink_to(real, target_is_directory=True)
+    info = inspect_path(str(pkg))
+    assert info.packages == []
+    assert info.errors == ["Skipped symlinked directory: inner_link"]
 
 
 # ---------- B06, B07: which files are inspected ----------

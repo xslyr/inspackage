@@ -37,6 +37,7 @@ PROPERTY_DECORATORS = frozenset({"property", "cached_property", "abstractpropert
 PROPERTY_ACCESSORS = frozenset({"setter", "getter", "deleter"})
 FUNCTION_NODES = (ast.FunctionDef, ast.AsyncFunctionDef)
 FILE_ERRORS = (OSError, SyntaxError, ValueError, RecursionError, MemoryError)
+TRY_NODES = (ast.Try, ast.TryStar) if hasattr(ast, "TryStar") else (ast.Try,)  # ast.TryStar: Python 3.11+
 
 
 class _Options(NamedTuple):
@@ -106,13 +107,26 @@ def inspect_target(
     root = results[0]
     for other in results[1:]:  # namespace package split across several directories
         if isinstance(root, PackageInfo) and isinstance(other, PackageInfo):
-            root.modules.extend(other.modules)
-            root.packages.extend(other.packages)
-            root.errors.extend(other.errors)
-    if isinstance(root, PackageInfo):
-        root.modules.sort(key=lambda m: (m.name, m.abspath))
-        root.packages.sort(key=lambda p: (p.name, p.abspath))
+            _merge_package(root, other)
     return root
+
+
+def _merge_package(target: PackageInfo, other: PackageInfo) -> None:
+    """Merge ``other`` into ``target`` recursively: subpackages with the same name become a single node."""
+
+    target.modules.extend(other.modules)
+    target.errors.extend(other.errors)
+    if target.docstring is None:
+        target.docstring = other.docstring
+    by_name = {package.name: package for package in target.packages}
+    for package in other.packages:
+        if package.name in by_name:
+            _merge_package(by_name[package.name], package)
+        else:
+            target.packages.append(package)
+            by_name[package.name] = package
+    target.modules.sort(key=lambda m: (m.name, m.abspath))
+    target.packages.sort(key=lambda p: (p.name, p.abspath))
 
 
 def inspect_path(
@@ -142,33 +156,52 @@ def _resolve(package_name: str | None, package_path: str | None) -> tuple[list[s
 
     name = (package_name or "").strip()
     if name and _looks_like_path(name):
-        return [_resolve_path(name)], None
+        if _is_explicit_path(name) or os.path.exists(name):
+            return [_resolve_path(name)], None
+        raise TargetNotFoundError(name, _package_not_found(name))  # e.g. ``typing-extensions``
 
     paths = _spec_paths(name) if name else []
     if paths:
         return paths, name
     if name and os.path.exists(name):  # e.g. a directory in cwd that is not on sys.path
         return [_resolve_path(name)], None
-    raise TargetNotFoundError(name, DefaultExceptions.package_not_found.format(name))
+    raise TargetNotFoundError(name, _package_not_found(name))
+
+
+def _package_not_found(name: str) -> str:
+    message = DefaultExceptions.format(DefaultExceptions.package_not_found, name)
+    if "-" in name:  # distribution name typed instead of the import name
+        message += DefaultExceptions.format(DefaultExceptions.did_you_mean, name.replace("-", "_"))
+    return message
 
 
 def _looks_like_path(name: str) -> bool:
     """
-    >>> [_looks_like_path(n) for n in (".", "./pkg", "/abs", "~/x", "mod.py", "pkg.sub", "pkg")]
-    [True, True, True, True, True, False, False]
+    >>> [_looks_like_path(n) for n in (".", "./pkg", "/abs", "~/x", "mod.py", "pkg.sub", "pkg", "a-b")]
+    [True, True, True, True, True, False, False, True]
     """
 
-    if name.endswith(".py") or "/" in name or os.sep in name or name.startswith(("~", ".")):
+    if _is_explicit_path(name) or name.startswith("."):
         return True
     return not all(part.isidentifier() for part in name.split("."))
+
+
+def _is_explicit_path(name: str) -> bool:
+    """Unambiguously a path (never a package name), even if it does not exist.
+
+    >>> [_is_explicit_path(n) for n in ("./pkg", "a\\\\b", "~x", "mod.py", "a-b", ".")]
+    [True, True, True, True, False, False]
+    """
+
+    return name.endswith(".py") or "~" in name or any(sep in name for sep in ("/", "\\", os.sep))
 
 
 def _resolve_path(raw: str) -> str:
     path = os.path.abspath(os.path.expanduser(raw))
     if not os.path.exists(path):
-        raise TargetNotFoundError(raw, DefaultExceptions.path_not_found.format(raw))
+        raise TargetNotFoundError(raw, DefaultExceptions.format(DefaultExceptions.path_not_found, raw))
     if not os.path.isdir(path) and not path.endswith(".py"):
-        raise NotPythonSourceError(raw, DefaultExceptions.not_python_source.format(raw))
+        raise NotPythonSourceError(raw, DefaultExceptions.format(DefaultExceptions.not_python_source, raw))
     return path
 
 
@@ -191,9 +224,23 @@ def _spec_paths(name: str) -> list[str]:
 
     if spec.submodule_search_locations is not None:  # regular or namespace package
         return list(dict.fromkeys(os.path.abspath(p) for p in spec.submodule_search_locations))
-    if spec.origin and spec.origin.endswith(".py") and os.path.isfile(spec.origin):  # single-file module
-        return [os.path.abspath(spec.origin)]
-    raise NotPythonSourceError(name, DefaultExceptions.not_python_source.format(name))  # built-in, .so, .pyc
+    origin = _source_origin(spec)
+    if origin:  # single-file module
+        return [origin]
+    raise NotPythonSourceError(  # built-in, .so, .pyc
+        name, DefaultExceptions.format(DefaultExceptions.not_python_source, name)
+    )
+
+
+def _source_origin(spec: importlib.machinery.ModuleSpec) -> str | None:
+    """``.py`` file of a single-file module; frozen stdlib modules (3.11+: ``os``, ``abc``) via ``loader_state``."""
+
+    origin = spec.origin
+    if origin == "frozen":
+        origin = getattr(spec.loader_state, "filename", None)
+    if isinstance(origin, str) and origin.endswith(".py") and os.path.isfile(origin):
+        return os.path.abspath(origin)
+    return None
 
 
 def _package_prefix(directory: str) -> str:
@@ -260,7 +307,10 @@ def _add_entry(info: PackageInfo, entry: os.DirEntry, depth: int, options: _Opti
     if _is_excluded(name, rel.split("/", 1)[1], options.exclude):
         return
 
-    if entry.is_dir(follow_symlinks=False):  # symlinked directories are never followed (loops)
+    if entry.is_symlink() and entry.is_dir():  # symlinked directories are never followed (loops)
+        if _visible(name, options):
+            info.errors.append(f"Skipped symlinked directory: {name}")
+    elif entry.is_dir(follow_symlinks=False):
         if not _visible(name, options) or (options.max_depth is not None and depth >= options.max_depth):
             return
         sub = _inspect_dir(entry.path, rel, _join_module(info.module, name), depth + 1, options)
@@ -297,11 +347,17 @@ def _inspect_file(path: str, rel: str, module: str, options: _Options) -> Module
             tree = ast.parse(file.read(), filename=path)
     except FILE_ERRORS as exc:
         info.errors.append(_format_error(exc))
+        return info
+    try:  # ast.unparse of pathological expressions may raise RecursionError: one file never aborts the inspection
+        docstring = _first_line(ast.get_docstring(tree))
+        imports = _collect_imports(tree)
+        all_exports = _collect_all(tree.body)
+        variables, functions, classes = _collect_body(tree.body, "function", options)
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        info.errors.append(_format_error(exc))
     else:
-        info.docstring = _first_line(ast.get_docstring(tree))
-        info.imports = _collect_imports(tree)
-        info.all_exports = _collect_all(tree.body)
-        info.variables, info.functions, info.classes = _collect_body(tree.body, "function", options)
+        info.docstring, info.imports, info.all_exports = docstring, imports, all_exports
+        info.variables, info.functions, info.classes = variables, functions, classes
     return info
 
 
@@ -310,24 +366,76 @@ def _visible(name: str, options: _Options) -> bool:
 
 
 def _collect_body(body: list[ast.stmt], function_kind: str, options: _Options):
+    """Definitions of one scope, including those inside top-level ``if``/``try`` blocks (never inside functions).
+
+    The same name defined in several branches is kept once (first occurrence); ``@overload`` stubs are dropped
+    when the implementation exists, otherwise only the first one is kept.
+    """
+
     variables: list[VariableInfo] = []
     functions: list[FunctionInfo] = []
     classes: list[ClassInfo] = []
-    seen: set[str] = set()
-    for node in body:
-        if isinstance(node, (*FUNCTION_NODES, ast.ClassDef)) and not _visible(node.name, options):
-            continue
-        if isinstance(node, FUNCTION_NODES):
-            kind = function_kind if function_kind == "function" else _method_kind(node)
-            functions.append(_function(node, kind))
-        elif isinstance(node, ast.ClassDef):
-            classes.append(_class(node, options))
+    statements = list(_flatten_blocks(body, False))
+    implemented = {node.name for node, _ in statements if isinstance(node, FUNCTION_NODES) and not _is_overload(node)}
+    seen_vars: set[str] = set()
+    seen_defs: dict[str, bool] = {}  # name -> first definition was inside a conditional block
+    for node, conditional in statements:
+        if isinstance(node, (*FUNCTION_NODES, ast.ClassDef)):
+            if not _keep_definition(node, conditional, seen_defs, implemented, options):
+                continue
+            if isinstance(node, ast.ClassDef):
+                classes.append(_class(node, options))
+            else:
+                kind = function_kind if function_kind == "function" else _method_kind(node)
+                functions.append(_function(node, kind))
         else:
             for var in _variables(node):
-                if var.name not in seen and _visible(var.name, options):
-                    seen.add(var.name)
+                if var.name not in seen_vars and _visible(var.name, options):
+                    seen_vars.add(var.name)
                     variables.append(var)
     return variables, functions, classes
+
+
+def _keep_definition(
+    node: ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef,
+    conditional: bool,
+    seen: dict[str, bool],
+    implemented: set[str],
+    options: _Options,
+) -> bool:
+    name = node.name
+    if not _visible(name, options):
+        return False
+    if name in seen and (conditional or seen[name]):
+        return False  # same name defined in another branch of an if/try
+    if isinstance(node, FUNCTION_NODES) and _is_overload(node) and (name in implemented or name in seen):
+        return False
+    seen.setdefault(name, conditional)
+    return True
+
+
+def _flatten_blocks(body: list[ast.stmt], conditional: bool) -> Iterable[tuple[ast.stmt, bool]]:
+    """Yield ``(statement, inside_a_conditional_block)`` descending into ``if``/``try`` (and ``try*``) blocks."""
+
+    for node in body:
+        if isinstance(node, ast.If):
+            yield from _flatten_blocks(node.body + node.orelse, True)
+        elif isinstance(node, TRY_NODES):
+            blocks = node.body + [stmt for handler in node.handlers for stmt in handler.body]
+            yield from _flatten_blocks(blocks + node.orelse + node.finalbody, True)
+        else:
+            yield node, conditional
+
+
+def _is_overload(node: ast.FunctionDef | ast.AsyncFunctionDef) -> bool:
+    """``@overload`` / ``@typing.overload`` / ``@typing_extensions.overload``."""
+
+    for decorator in node.decorator_list:
+        if isinstance(decorator, ast.Name) and decorator.id == "overload":
+            return True
+        if isinstance(decorator, ast.Attribute) and decorator.attr == "overload":
+            return True
+    return False
 
 
 def _class(node: ast.ClassDef, options: _Options) -> ClassInfo:
@@ -425,10 +533,21 @@ def _collect_imports(tree: ast.Module) -> list[ImportInfo]:
 
 
 def _collect_all(body: list[ast.stmt]) -> list[str] | None:
-    """Literal ``__all__`` (``=``, annotated or ``+=``); ``None`` when absent or not a literal."""
+    """Literal ``__all__`` (``=``, annotated, ``+=``, ``.extend``/``.append``); ``None`` when absent or unknown.
+
+    Once ``__all__`` receives a non-literal value its content is unknown: later ``+=``/``.extend`` are ignored
+    until a new literal assignment.
+    """
 
     exports: list[str] | None = None
+    known = True
     for node in body:
+        if isinstance(node, ast.Expr):
+            is_call, added = _all_method_call(node.value)
+            if is_call and known:
+                exports = None if added is None else (exports or []) + added
+                known = added is not None
+            continue
         if isinstance(node, ast.Assign):
             targets = node.targets
         elif isinstance(node, (ast.AnnAssign, ast.AugAssign)):
@@ -438,14 +557,35 @@ def _collect_all(body: list[ast.stmt]) -> list[str] | None:
         if node.value is None or not any(isinstance(t, ast.Name) and t.id == "__all__" for t in targets):
             continue
         values = _literal_strings(node.value)
-        if values is None:
-            continue
         if isinstance(node, ast.AugAssign):
-            if isinstance(node.op, ast.Add):
+            if not known:
+                continue
+            if isinstance(node.op, ast.Add) and values is not None:
                 exports = (exports or []) + values
+            else:
+                exports, known = None, False
         else:
-            exports = values
+            exports, known = values, values is not None
     return exports
+
+
+def _all_method_call(node: ast.expr) -> tuple[bool, list[str] | None]:
+    """``(is __all__.extend/append call, literal names added or None if not literal)``."""
+
+    if not (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Name)
+        and node.func.value.id == "__all__"
+        and node.func.attr in ("extend", "append")
+        and len(node.args) == 1
+        and not node.keywords
+    ):
+        return False, None
+    arg = node.args[0]
+    if node.func.attr == "append":
+        return True, [arg.value] if isinstance(arg, ast.Constant) and isinstance(arg.value, str) else None
+    return True, _literal_strings(arg)
 
 
 def _literal_strings(node: ast.expr) -> list[str] | None:

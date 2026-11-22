@@ -8,6 +8,12 @@ from typer.testing import CliRunner
 from inspackage import __version__
 from inspackage.cli import typer_app
 
+
+def _flat(text: str) -> str:
+    """Undo Rich's line wrapping (80 columns under CliRunner)."""
+    return " ".join(text.split())
+
+
 # ---------- behaviour that already works ----------
 
 
@@ -98,6 +104,28 @@ def test_dir_pointing_to_non_python_file_does_not_crash_with_keyerror(run_cli, t
     target.write_text("hello")
     result = run_cli("--static", "--dir", str(target))
     assert not isinstance(result.exception, KeyError)
+
+
+def test_target_with_rich_markup_is_printed_literally(run_cli):
+    result = run_cli("--static", "/nonexist[/]")
+    assert result.exit_code == 1
+    assert "Path '/nonexist[/]' not found!" in _flat(result.output)
+    assert "MarkupError" not in repr(result.exception)
+
+
+def test_dir_with_rich_markup_is_printed_literally(run_cli, tmp_path):
+    result = run_cli("--static", "--dir", str(tmp_path / "[bold]missing"))
+    assert result.exit_code == 1
+    assert "[bold]missing' not found!" in _flat(result.output)
+
+
+def test_distribution_name_suggests_import_name(run_cli, tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    result = run_cli("--static", "typing-extensions-xyz")
+    assert result.exit_code == 1
+    assert "Path" not in _flat(result.output)
+    assert "Package 'typing-extensions-xyz' not found" in _flat(result.output)
+    assert "Did you mean 'typing_extensions_xyz'?" in _flat(result.output)
 
 
 def test_cli_survives_a_file_with_syntax_error(run_cli, samplepkg_path):
