@@ -38,7 +38,6 @@ def test_static_output_is_deterministic_between_runs(run_cli, samplepkg_ok):
     assert first == second
 
 
-@pytest.mark.xfail(strict=True, reason="B12 #9")
 def test_static_output_lists_properties(static_output):
     assert "prop_value" in static_output
 
@@ -75,3 +74,26 @@ def test_static_snapshot_of_subpackage(run_cli, samplepkg_path):
 def test_json_snapshot_of_single_module(fixtures_dir):
     tree = get_tree_map(package_path=str(fixtures_dir / "single_module.py"))
     assert_snapshot("single_module.json", json.dumps(tree, indent=2, sort_keys=True) + "\n")
+
+
+def test_static_output_keeps_brackets_and_does_not_crash_on_markup(run_cli, tmp_path):
+    (tmp_path / "m.py").write_text(
+        'def f(x: list[int], y="[/]") -> dict[str, int]: ...\n'
+        'def g(y="[/x]"): ...\n'
+        "class C:\n    def __init__(self, a: list[int]): ...\n    def __init__(self, b: set[str]): ...\n"
+        "    @property\n    def prop_x(self): ...\n"
+    )
+    result = run_cli("--static", "--dir", str(tmp_path))
+    assert result.exit_code == 0, result.output
+    flat = " ".join(result.output.split())
+    assert "list[int]" in flat
+    assert "dict[str, int]" in flat
+    assert "[/x]" in flat
+    assert "set[str]" in flat  # every constructor is listed
+    assert "prop_x" in flat
+
+
+def test_static_output_prints_error_nodes_literally(run_cli, tmp_path):
+    (tmp_path / "bad.py").write_text("def f(:\n")
+    result = run_cli("--static", "--dir", str(tmp_path))
+    assert "SyntaxError" in result.output

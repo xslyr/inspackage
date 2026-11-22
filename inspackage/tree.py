@@ -2,7 +2,7 @@ import os
 from enum import Enum
 from typing import Tuple
 
-from rich.markup import escape
+from rich.text import Text
 from rich.tree import Tree as RichTree
 from textual.app import App, ComposeResult
 from textual.widgets import Footer, Header, Tree
@@ -54,11 +54,11 @@ class TreeBuilder:
         """Method to create a path details on rich tree from a tree_dict"""
 
         if self.interactive:
-            self.widget = Tree(tree_map["name"])
+            self.widget = Tree(Text(str(tree_map["name"])))
             self.widget.root.expand()
             root_node = self.widget.root
         else:
-            root_node = RichTree(tree_map["name"])
+            root_node = RichTree(Text(str(tree_map["name"])))
 
         if tree_map["category"] == "file":  # single module as root
             self.__populate_file_node(tree_map, root_node)
@@ -72,7 +72,6 @@ class TreeBuilder:
     def __main_formatter(self, data: str | Tuple, category: CategoryStyle) -> str:
         """Formatter to unify label, colors & main texts."""
 
-        # conferir se as properties recebem tuplas ou strings
         result = ""
         match category:
             case CategoryStyle.title:
@@ -127,12 +126,13 @@ class TreeBuilder:
                 result = pattern.format(*data)
 
             case CategoryStyle.item_errors:
-                result = f"{Icon.errors} {escape(str(data))}"
+                result = f"{Icon.errors} {data}"
 
         return str(result)
 
     def __add_new_node(self, parent_node: NodeType, txt: str | Tuple, category: CategoryStyle, expand: bool = False):
-        formatted_txt = self.__main_formatter(txt, category)
+        # Text (not str): inspected code may contain "[...]", which Rich/Textual would parse as markup.
+        formatted_txt = Text(self.__main_formatter(txt, category))
         if isinstance(parent_node, TextualTree):
             if category in TreeBuilder.FINAL_NODES:
                 return parent_node.add(formatted_txt, allow_expand=False)
@@ -185,20 +185,18 @@ class TreeBuilder:
         for cls_key, cls_val in c.items():
             match cls_key:
                 case "constructor":
-                    self.__add_new_node(node_n1, cls_val[0], CategoryStyle.class_constructor, False)
+                    for ctor in cls_val:
+                        self.__add_new_node(node_n1, ctor, CategoryStyle.class_constructor, False)
 
                 case "variables":
                     node_n2 = self.__add_new_node(node_n1, "", CategoryStyle.class_title_vars, False)
                     for v in cls_val:
                         self.__add_new_node(node_n2, str(v), CategoryStyle.class_item_vars, False)
 
-                case "property":
+                case "properties":
                     node_n2 = self.__add_new_node(node_n1, "", CategoryStyle.class_title_properties, False)
                     for v in cls_val:
-                        if isinstance(v, tuple):
-                            self.__add_new_node(node_n2, v, CategoryStyle.class_item_properties, False)
-                        else:
-                            self.__add_new_node(node_n2, str(v), CategoryStyle.class_item_properties, False)
+                        self.__add_new_node(node_n2, str(v), CategoryStyle.class_item_properties, False)
 
                 case "methods":
                     node_n2 = self.__add_new_node(node_n1, "", CategoryStyle.class_title_methods, False)
@@ -220,7 +218,7 @@ class InspackageApp(App):
         super().__init__()
         self.on_dark_mode: bool = True
         self.light_theme = os.getenv("LIGHT_THEME", "textual-light")
-        self.dark_theme = os.getenv("LIGHT_THEME", "flexoki")
+        self.dark_theme = os.getenv("DARK_THEME", "flexoki")
         self._tree = tree
 
     def on_mount(self) -> None:
