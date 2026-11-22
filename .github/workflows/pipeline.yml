@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 env:
-  POETRY_VERSION: 2.2.1
+  POETRY_VERSION: 2.4.1
 
 jobs:
 
