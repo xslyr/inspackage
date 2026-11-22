@@ -30,37 +30,92 @@ pip install inspackage
 
 
 ## 💻 Usage
-To inspect a package or directory, simply run the inspackage command followed by the path you want to analyze.
+To inspect a package or directory, run the inspackage command followed by the target you want to analyze.
 
-Basic Usage:
 ```bash
 # Inspect the current directory
 inspackage .
 
-# Inspect the package on current venv
+# Inspect a package installed on the current venv
 inspackage <package-name>
 
-# Inspect a specific package path
+# Inspect a specific package path (directory or a single .py file)
 inspackage --dir /path/to/python/project
 ```
 <img src="https://raw.githubusercontent.com/xslyr/inspackage/refs/heads/main/asset/basic-demo.gif" width=400px style="margin-left:50px">
 
-The basic inspection runs on Interactive Mode, here you can
+The default format (`tui`) is interactive, here you can
 - Use the Arrow Keys to navigate the tree.
 - Press `Enter` or `Space` to expand/collapse directories or file details.
 - Press `Q` to quit or `D` to toggle display between dark/light mode.
 
-Other ways to use this tool:
+### Output formats and files
+```
+inspackage [TARGET] [--dir PATH] [--format {tui,tree,json}] [-o FILE]
+           [--include-private] [--exclude GLOB]... [--max-depth N] [-v]
+```
 ```bash
-# Inspection printed as a static data on console
-inspackage --static <package-name>
+# Static tree printed on the console
+inspackage <package-name> --format tree
 
-# Save inspection as a json file
-inspackage --save <package-name>
+# JSON (with "schema_version") on stdout, or written to a file
+inspackage <package-name> --format json
+inspackage <package-name> --format json -o inspection.json
 
-# To check all comands
+# Plain-text tree in a file (no colors)
+inspackage . --format tree -o tree.txt
+
+# Filters
+inspackage . --include-private --exclude "tests" --exclude "*_pb2.py" --max-depth 2
+
+# Resolved path, module/error counts (and tracebacks of unexpected errors) on stderr
+inspackage . --format tree --verbose
+
+# All options
 inspackage --help
 ```
+Without `-o`, text formats go to stdout. `-o` cannot be combined with `--format tui`. When `-o` is given without
+`--format`, the format is inferred from the extension (`.json` -> json, `.txt` -> tree); any other extension is an
+error (the default format is `tui`, which cannot be written to a file: pass `--format`). Files are written atomically
+(a failed run never leaves a partial file). Closing the pipe early (`inspackage X --format json | head -1`) is not an
+error. More formats (html, md, llm, graph) are planned and currently answer with a "not available in this version"
+error.
+
+### Customizing the TUI (`-e/--env`)
+`-e/--env FILE` loads an env file (default `~/.inspackagerc`, optional) that sets the Textual themes:
+```bash
+# ~/.inspackagerc
+LIGHT_THEME=textual-light
+DARK_THEME=flexoki
+```
+Any Textual theme name works. Values from the file override the current environment.
+
+### Deprecated options (still working)
+| Old | Now | Notes |
+| --- | --- | --- |
+| `--static` | `--format tree` | prints a warning on stderr |
+| `--save` | `--format json -o <name>.json` | `<name>` is the resolved package/module name (e.g. `xml.etree` -> `etree.json`), written to the current directory; combined with `--static`/`--format tree`/`tui` it is written in addition to that output, before the TUI opens. Alone, it no longer opens the TUI. Prints a warning on stderr |
+
+### Exit codes
+| Code | Meaning |
+| --- | --- |
+| 0 | success |
+| 1 | invalid usage (name and `--dir` together, unknown option or format, `-o` with `tui`, unwritable output) |
+| 2 | target not found, not a Python source, no Python modules found, or inspection failure |
+
+Errors are short messages on stderr, without traceback (use `--verbose` to get it).
+
+### Behavior changes (v0.2.0)
+- `__init__.py` and `__main__.py` now appear in the tree.
+- Names starting with `_` are hidden by default; use `--include-private` to show them.
+- An installed package has priority over a local folder with the same name; use `./name` to force the folder.
+- Directory symlinks are not followed.
+- `--save` alone no longer opens the TUI; it only writes the JSON file. To keep the old behavior (save, then open the
+  TUI) use `--format tui --save`.
+- **The JSON written by `--save` / `--format json` changed format.** It is now the versioned schema
+  (`schema_version`, `type`, `modules`, `packages`, ... plus new keys); the old `name`/`category`/`nodes` format of
+  v0.1.x is no longer written. Tools reading old files must be updated.
+- The `--save` file name uses the resolved name (e.g. `xml.etree` -> `etree.json`, `.` -> the directory name), never `.`.
 
 
 <br>

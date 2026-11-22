@@ -1,0 +1,17 @@
+{
+  "category": "file",
+  "errors": [],
+  "name": "single_module.py",
+  "structure": {
+    "methods": [
+      [
+        "single_func",
+        "",
+        null
+      ]
+    ],
+    "variables": [
+      "SINGLE_CONST"
+    ]
+  }
+}

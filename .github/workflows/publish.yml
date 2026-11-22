@@ -1,0 +1,86 @@
+name: Publish
+
+# Publica no PyPI por Trusted Publishing (OIDC, sem token) quando uma tag v* é enviada.
+# Configuração manual única (PyPI e environment "pypi" no GitHub): docs/RELEASING.md.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  POETRY_VERSION: 2.4.1
+
+jobs:
+
+  build:
+    name: Build and check package
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth 0: o passo abaixo precisa do histórico da main para conferir a tag.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+
+      # Só publica tag que aponte para um commit da main.
+      - name: Check tag points to main
+        run: |
+          git fetch origin main && git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "::error::tag must point to a commit on main"; exit 1; }
+
+      - name: Check lock file is in sync with pyproject
+        run: poetry check --lock
+
+      # Falha antes de qualquer publicação se a tag não for a versão do pyproject.toml.
+      - name: Check tag matches project version
+        run: |
+          tag_version="${GITHUB_REF_NAME#v}"
+          project_version="$(poetry version -s)"
+          if [ "$tag_version" != "$project_version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME não bate com a versão do pyproject.toml ($project_version)"
+            exit 1
+          fi
+          echo "Publicando a versão $project_version"
+
+      - name: Build sdist and wheel
+        run: poetry build
+
+      - name: Check metadata (twine)
+        run: pipx run twine check dist/*
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/inspackage/
+    permissions:
+      id-token: write  # único lugar com id-token; exigido pelo Trusted Publishing
+    steps:
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI (Trusted Publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1

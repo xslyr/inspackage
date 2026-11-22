@@ -1,33 +1,42 @@
 [project]
 name = "inspackage"
-version = "0.1.1"
+version = "0.2.0"
 description = "Useful tool for general inspection about some python package."
 authors = [{name = "xslyr",email = "wesleysilv@gmail.com"}]
-Homepage = "https://github.com/xslyr/inspackage"
-Documentation = "https://github.com/xslyr/inspackage#readme"
-Repository = "https://github.com/xslyr/inspackage.git"
-Issues = "https://github.com/xslyr/inspackage/issues"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Topic :: Software Development :: Build Tools",
     "Topic :: Utilities",
-    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Operating System :: OS Independent",
     "Environment :: Console",
+    "Typing :: Typed",
 ]
 requires-python = ">=3.10,<4.0.0"
 
 dependencies = [
-    "typer[all] (>=0.21.1,<0.22.0)",
+    "typer (>=0.21.1,<0.22.0)",
     "python-dotenv (>=1.2.1,<2.0.0)",
     "textual (>=7.5.0,<8.0.0)",
+    "rich (>=14.2,<15)",
 ]
 
+[project.urls]
+Homepage = "https://github.com/xslyr/inspackage"
+Documentation = "https://github.com/xslyr/inspackage#readme"
+Repository = "https://github.com/xslyr/inspackage.git"
+Issues = "https://github.com/xslyr/inspackage/issues"
+
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
+requires = ["poetry-core>=2.2.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [project.scripts]
@@ -52,7 +61,8 @@ addopts = "--doctest-modules"
 [tool.taskipy.tasks]
 lint = "pylint inspackage"
 ruff = "ruff format ./inspackage && ruff check --fix ./inspackage"
-test = "pytest -v --cov=inspackage"
+ruff_check = "ruff format --check inspackage tests && ruff check inspackage tests"
+test = "pytest -v --cov=inspackage --cov-fail-under=85"
 post_test = "coverage html"
 
 
@@ -78,6 +88,7 @@ disable = [
 
 [tool.ruff]
 line-length = 120
+extend-exclude = ["tests/fixtures"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W"]
